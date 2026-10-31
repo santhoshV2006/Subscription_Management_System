@@ -1,4 +1,4 @@
-# 🔄 Brightloop — Subscription Management System
+# Subscription Management System
 
 A modern, full-stack enterprise Subscription Management System built for recurring billing, catalog configuration, multi-variant pricing, quotation generation, and subscription lifecycle management.
 

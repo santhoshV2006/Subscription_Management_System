@@ -38,7 +38,8 @@ app.use(cookieParser());
 // Rate limiting
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20,
+  max: process.env.NODE_ENV === 'test' ? 2000 : 100,
+  skip: () => process.env.NODE_ENV === 'test',
   message: {
     success: false,
     message: 'Too many requests. Please try again after 15 minutes.'
@@ -49,7 +50,8 @@ const authLimiter = rateLimit({
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: process.env.NODE_ENV === 'test' ? 5000 : 500,
+  skip: () => process.env.NODE_ENV === 'test',
   message: {
     success: false,
     message: 'Too many requests. Please try again later.'

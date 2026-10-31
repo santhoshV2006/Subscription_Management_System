@@ -79,23 +79,61 @@ const Loading = {
 // ─── Modal ──────────────────────────────────────────────────────────────────────
 
 const Modal = {
-  open(title, bodyHTML, footerHTML = '') {
+  open(titleOrConfig, bodyHTML = '', footerHTML = '', width = '') {
     // Remove any existing modal
     this.close();
+
+    let title = '';
+    let body = '';
+    let footer = '';
+    let modalWidth = '';
+    const buttonActionMap = [];
+
+    if (titleOrConfig && typeof titleOrConfig === 'object') {
+      title = titleOrConfig.title || '';
+      body = titleOrConfig.body || titleOrConfig.bodyHTML || titleOrConfig.content || '';
+      modalWidth = titleOrConfig.width || '';
+
+      if (titleOrConfig.footer || titleOrConfig.footerHTML) {
+        footer = titleOrConfig.footer || titleOrConfig.footerHTML;
+      } else if (Array.isArray(titleOrConfig.buttons)) {
+        footer = titleOrConfig.buttons.map((btn, idx) => {
+          const btnId = btn.id || `modal-btn-${idx}`;
+          if (typeof btn.onclick === 'function' || typeof btn.action === 'function') {
+            buttonActionMap.push({ id: btnId, fn: btn.onclick || btn.action });
+          }
+          const onclickAttr = (typeof btn.onclick === 'string') ? `onclick="${btn.onclick}"` : '';
+          return `
+            <button type="button" class="btn ${btn.class || 'btn-secondary'}"
+              id="${btnId}"
+              ${onclickAttr}
+              ${btn.disabled ? 'disabled' : ''}>
+              ${btn.label || btn.text || 'Action'}
+            </button>
+          `;
+        }).join('');
+      }
+    } else {
+      title = titleOrConfig || '';
+      body = bodyHTML || '';
+      footer = footerHTML || '';
+      modalWidth = width || '';
+    }
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.id = 'modal-overlay';
+    const styleAttr = modalWidth ? `style="max-width: ${modalWidth}; width: 100%;"` : '';
     overlay.innerHTML = `
-      <div class="modal">
+      <div class="modal" ${styleAttr}>
         <div class="modal-header">
           <h3 class="modal-title">${title}</h3>
-          <button class="modal-close" onclick="Modal.close()">
+          <button class="modal-close" onclick="Modal.close()" aria-label="Close modal">
             <span class="material-icons-round">close</span>
           </button>
         </div>
-        <div class="modal-body">${bodyHTML}</div>
-        ${footerHTML ? `<div class="modal-footer">${footerHTML}</div>` : ''}
+        <div class="modal-body">${body}</div>
+        ${footer ? `<div class="modal-footer">${footer}</div>` : ''}
       </div>
     `;
 
@@ -105,6 +143,14 @@ const Modal = {
     });
 
     document.body.appendChild(overlay);
+
+    // Wire functional button callbacks if any
+    buttonActionMap.forEach(({ id, fn }) => {
+      const btnEl = document.getElementById(id);
+      if (btnEl) {
+        btnEl.addEventListener('click', (e) => fn(e));
+      }
+    });
 
     // Close on Escape key
     document.addEventListener('keydown', this._escHandler);

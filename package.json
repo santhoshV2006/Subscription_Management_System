@@ -14,6 +14,8 @@
     "seed:mock": "npm run seed:mock --prefix backend",
     "test": "npm test --prefix backend",
     "test:parallel": "npm run test:parallel --prefix backend",
+    "test:buttons": "node backend/test_all_buttons_and_modals.js",
+    "test:all": "npm test --prefix backend && node backend/test_all_buttons_and_modals.js",
     "test:m1": "npm run test:m1 --prefix backend",
     "test:m2": "npm run test:m2 --prefix backend",
     "test:m3": "npm run test:m3 --prefix backend"

@@ -148,48 +148,125 @@ const Dashboards = {
   // ─── Admin Dashboard ──────────────────────────────────────────────────────────
 
   async adminDashboard() {
-    const result = await API.get('/users/dashboard-stats');
+    const [result, subStatsRes, recentSubsRes] = await Promise.all([
+      API.get('/users/dashboard-stats'),
+      API.get('/subscriptions/stats').catch(() => ({ success: false })),
+      API.get('/subscriptions?limit=5').catch(() => ({ success: false }))
+    ]);
+
     if (!result.success) {
       return this.layout('dashboard', '<p>Failed to load dashboard data.</p>');
     }
 
     const { stats, recentUsers, recentActivity } = result.data;
+    const subStats = subStatsRes.success ? subStatsRes.data : { active_subscriptions: 0, total_subscriptions: 0, total_quotations: 0, active_annual_value: 0 };
+    const recentSubs = recentSubsRes.success ? recentSubsRes.data.subscriptions : [];
     const user = Auth.getUser();
 
     const content = `
       <div class="welcome-banner">
         <h2>Welcome back, ${user?.name?.split(' ')[0]} 👋</h2>
-        <p>Here's an overview of your system. You have full administrative access to manage users, subscriptions, and settings.</p>
+        <p>Full administrative command center for Brightloop. Manage subscriptions, quotations, products, plans, tax rules, and system users.</p>
+      </div>
+
+      <!-- Quick Actions Toolbar -->
+      <div class="card mb-4" style="background: var(--surface-card); border: 1px solid var(--gray-200); padding: 16px 20px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+          <div style="font-weight: 600; font-size: 14px; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+            <span class="material-icons-round" style="color: var(--primary-600); font-size: 20px;">bolt</span>
+            Quick Actions:
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <button class="btn btn-sm btn-primary" onclick="Module3.openCreateSubscriptionModal()">
+              <span class="material-icons-round" style="font-size: 16px;">add</span> New Subscription
+            </button>
+            <button class="btn btn-sm btn-secondary" onclick="Module3.openCreateQuotationModal()">
+              <span class="material-icons-round" style="font-size: 16px;">request_quote</span> Create Quotation
+            </button>
+            <button class="btn btn-sm btn-outline" onclick="Module2.openProductModal()">
+              <span class="material-icons-round" style="font-size: 16px;">inventory_2</span> Add Product
+            </button>
+            <button class="btn btn-sm btn-outline" onclick="Module2.openPlanModal()">
+              <span class="material-icons-round" style="font-size: 16px;">subscriptions</span> Create Plan
+            </button>
+            <button class="btn btn-sm btn-outline" onclick="Router.navigate('/dashboard/admin/staff')">
+              <span class="material-icons-round" style="font-size: 16px;">badge</span> Add Staff
+            </button>
+            <button class="btn btn-sm btn-ghost" onclick="Router.navigate('/dashboard/admin/pricing-calculator')">
+              <span class="material-icons-round" style="font-size: 16px;">calculate</span> Simulator
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="stats-grid">
         <div class="stat-card primary">
           <div class="stat-icon">
-            <span class="material-icons-round">group</span>
+            <span class="material-icons-round">subscriptions</span>
           </div>
-          <div class="stat-value">${stats.totalUsers}</div>
-          <div class="stat-label">Total Users</div>
+          <div class="stat-value">${subStats.active_subscriptions || 0}</div>
+          <div class="stat-label">Active Subscriptions</div>
         </div>
         <div class="stat-card success">
           <div class="stat-icon">
-            <span class="material-icons-round">verified_user</span>
+            <span class="material-icons-round">payments</span>
           </div>
-          <div class="stat-value">${stats.activeUsers}</div>
-          <div class="stat-label">Active Users</div>
+          <div class="stat-value">₹${(subStats.active_annual_value || 0).toLocaleString('en-IN')}</div>
+          <div class="stat-label">Active Contract Value</div>
         </div>
         <div class="stat-card warning">
           <div class="stat-icon">
-            <span class="material-icons-round">badge</span>
+            <span class="material-icons-round">request_quote</span>
           </div>
-          <div class="stat-value">${stats.staffCount}</div>
-          <div class="stat-label">Staff Members</div>
+          <div class="stat-value">${subStats.total_quotations || 0}</div>
+          <div class="stat-label">Total Quotations</div>
         </div>
         <div class="stat-card danger">
           <div class="stat-icon">
-            <span class="material-icons-round">people</span>
+            <span class="material-icons-round">group</span>
           </div>
-          <div class="stat-value">${stats.customerCount}</div>
-          <div class="stat-label">Customers</div>
+          <div class="stat-value">${stats.totalUsers}</div>
+          <div class="stat-label">System Users (${stats.activeUsers} active)</div>
+        </div>
+      </div>
+
+      <!-- Recent Subscriptions Overview -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 class="card-title">Recent Subscriptions</h3>
+          <a class="btn btn-ghost btn-sm" onclick="Router.navigate('/dashboard/admin/subscriptions')">View all</a>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Subscription #</th>
+                <th>Customer</th>
+                <th>Plan</th>
+                <th>Start Date</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recentSubs.length === 0 ? `
+                <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">No subscriptions found</td></tr>
+              ` : recentSubs.map(s => `
+                <tr>
+                  <td><strong class="font-mono text-primary cursor-pointer" onclick="Module3.viewSubscription(${s.id})">${s.subscription_number}</strong></td>
+                  <td>${s.customer_name || 'Customer'}</td>
+                  <td><span class="badge-role" style="background: rgba(37,99,235,0.1); color: var(--primary-600);">${s.plan_name}</span></td>
+                  <td style="color: var(--text-muted); font-size: 13px;">${DateUtils.format(s.start_date)}</td>
+                  <td class="font-mono fw-bold">₹${parseFloat(s.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  <td>${Module3.renderStatusBadge(s.status)}</td>
+                  <td style="text-align: right;">
+                    <button class="btn btn-sm btn-outline" onclick="Module3.viewSubscription(${s.id})">Details</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
         </div>
       </div>
 

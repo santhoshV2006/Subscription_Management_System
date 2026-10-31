@@ -5,19 +5,22 @@ const { v4: uuidv4 } = require('uuid');
 const { db } = require('../config/database');
 const { sendPasswordResetEmail } = require('../utils/email');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'brightloop_jwt_secret_key_default_2026';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'brightloop_refresh_jwt_secret_key_default_2026';
+
 /**
  * Generate JWT access and refresh tokens.
  */
 function generateTokens(user) {
   const accessToken = jwt.sign(
     { userId: user.id, uuid: user.uuid, role: user.role_name },
-    process.env.JWT_SECRET,
+    JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
   );
 
   const refreshToken = jwt.sign(
     { userId: user.id, uuid: user.uuid },
-    process.env.JWT_REFRESH_SECRET,
+    JWT_REFRESH_SECRET,
     { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' }
   );
 

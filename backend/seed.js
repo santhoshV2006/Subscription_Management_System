@@ -2,6 +2,8 @@
  * Seed script to create an initial admin user.
  * Run with: npm run seed
  */
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 require('dotenv').config();
 
 const bcrypt = require('bcryptjs');

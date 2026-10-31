@@ -1,141 +1,103 @@
 # 🔄 Brightloop — Subscription Management System
 
-A modern, full-stack Subscription Management System built for seamless handling of recurring billing, user roles, customer subscriptions, and business operations.
+A modern, full-stack enterprise Subscription Management System built for recurring billing, catalog configuration, multi-variant pricing, quotation generation, and subscription lifecycle management.
 
 ---
 
-## ✨ Features
+## 🚀 System Modules
 
-- **🔐 Multi-Role Authentication & Authorization**
-  - **Admin**: Full control over users, subscriptions, billing, and system metrics.
-  - **Staff**: Operational access for customer management and subscription processing.
-  - **Customer**: Self-service portal to browse plans, manage active subscriptions, and view invoices.
-- **🛡️ Secure JWT Authentication**
-  - Access tokens (short-lived) & Refresh tokens (stored securely).
-  - Rate limiting on sensitive endpoints (login, register, forgot-password).
-  - Password hashing with bcrypt.
-- **⚡ Single Page Application (SPA)**
-  - Fast, reactive client-side router without heavy external frameworks.
-  - Reusable UI component library (modals, tables, toast notifications, loading spinners).
-  - Fully responsive design with modern CSS variables.
-- **📦 Reliable Data Persistence**
-  - Fast embedded SQLite database using `better-sqlite3` with WAL (Write-Ahead Logging) enabled.
-  - Automatic migration and seeding utilities.
-- **📧 Email Notifications**
-  - Integrated mailer service for password reset links and account notifications (with development fallback).
+### 🔐 Module 1: Authentication and User Management
+- **Multi-Role Authentication & RBAC**: Admin, Staff, and Customer roles with strict backend and frontend route guards.
+- **Registration & Credentials**: Email uniqueness enforcement (`COLLATE NOCASE`), password complexity validation (>8 chars, uppercase, lowercase, special char).
+- **Password Hashing**: Bcrypt salted hashing with salt factor 12.
+- **Forgot & Reset Password**: Secure token-based reset link delivery via nodemailer and Ethereal email simulator.
+- **Staff Onboarding**: Admin-only staff account creation with activity audit logging.
+- **Role Dashboards**: Tailored interactive dashboards for Admin, Staff, and Customer.
 
----
+### 📦 Module 2: Products, Plans, Variants, Taxes and Discounts
+- **Product Management**: CRUD for digital products and services with sales and cost price metrics.
+- **Product Variants & Additional Pricing**: Variant branding surcharges (e.g., Selecting the **Odoo brand adds ₹560** to the base price).
+- **Subscription Plans**: Daily, Weekly, Monthly, and Yearly billing frequencies; minimum purchase quantity enforcement; plan availability start/end dates; auto-closure upon expiry; configurable early closure, pause, and renewal permissions.
+- **Tax Management**: Tax rules with automated percentage and fixed calculations.
+- **Discount Management**: Percentage and flat discount coupons; minimum purchase amount and quantity conditions; start/end date restrictions; maximum usage limits; automated expiration and stop conditions.
+- **Unified Pricing Engine**: Consistent calculation engine across all system modules.
 
-## 🏗️ Architecture & Project Structure
-
-```
-Subscription Management System/
-├── backend/
-│   ├── config/
-│   │   └── database.js          # SQLite connection and schema setup
-│   ├── controllers/
-│   │   ├── authController.js    # Authentication & token logic
-│   │   └── userController.js    # User CRUD & profile operations
-│   ├── middleware/
-│   │   ├── auth.js              # JWT validation & role guards
-│   │   └── validation.js        # Request input sanitization & checks
-│   ├── routes/
-│   │   ├── auth.js              # Auth endpoints (/api/auth)
-│   │   └── users.js             # User endpoints (/api/users)
-│   ├── utils/
-│   │   └── email.js             # Nodemailer integration
-│   ├── seed.js                  # Database seeder script
-│   ├── server.js                # Express app entry & static file server
-│   ├── package.json             # Backend dependencies & npm scripts
-│   └── .env.example             # Environment variable templates
-├── frontend/
-│   ├── css/
-│   │   └── styles.css           # Global stylesheet & design system
-│   ├── js/
-│   │   ├── api.js               # Centralized fetch wrapper & HTTP client
-│   │   ├── app.js               # Frontend bootstrap entry point
-│   │   ├── auth.js              # Client auth state & token storage
-│   │   ├── components.js        # UI components (Toast, Modal, StatCard, Table)
-│   │   ├── config.js            # Frontend environment configuration
-│   │   ├── dashboards.js        # Admin, Staff, and Customer dashboard views
-│   │   ├── pages.js             # Auth pages (Login, Register, Forgot Password)
-│   │   └── router.js            # Client-side hash/path router
-│   └── index.html               # Main HTML entry
-├── .gitignore                   # Ignored files (node_modules, .env, DBs)
-└── README.md                    # Project documentation
-```
+### 🔄 Module 3: Subscription & Quotation Management
+- **Subscription Management**: Unique auto-generated subscription numbers (`SUB-YYYY-XXXXX`), customer binding, selected plan, start and expiry dates, payment terms (`Net 15`, `Net 30`, `Net 60`, `Immediate`), multi-line products with variant attributes.
+- **Quotation Templates**: Reusable templates with predefined plans, product lines, quantities, and validity days.
+- **Quotation Workflow**: Generation, editing, status management (`Draft`, `Sent`, `Accepted`, `Rejected`, `Expired`), and one-click conversion into active subscriptions.
+- **Subscription Lifecycle State Machine**:
+  - `Draft` &rarr; `Quotation` &rarr; `Confirmed` &rarr; `Active` &rarr; `Paused` &rarr; `Closed`.
+  - Pause & Resume actions (checks `plan.allow_pause`).
+  - Renew actions (checks `plan.allow_renewal`, extends expiry date).
+  - Early closure (checks `plan.allow_early_closure`, records reason and timestamp).
+  - Background automatic expiry handling for expired contracts.
+  - Granular audit trail in `subscription_history`.
+- **Module 4 Invoicing Integration**: `/api/subscriptions/:id/invoice-payload` delivering standardized billing payloads for automated recurring invoice generation.
 
 ---
 
-## 🚀 Quick Start Guide
+## 🛠️ Environment Setup & Running
 
-### 1. Prerequisites
-- **Node.js** v18 or higher
-- **npm** v9 or higher
-
-### 2. Installation
-Navigate into the backend directory and install dependencies:
+### 1. Install Dependencies
 ```bash
 cd backend
 npm install
 ```
 
-### 3. Environment Configuration
+### 2. Configure Environment
 Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
 
-### 4. Seed the Database
-Initialize tables and create the default admin account:
+### 3. Seed Mock Data
+Seed realistic mock data covering all modules (Admin, Staff, Customers, Catalog, Discounts, Templates, Quotes, Subscriptions, and Audit History):
 ```bash
-npm run seed
+npm run seed:mock
 ```
 
-### 5. Run the Server
+### 4. Start the Application Server
 ```bash
-# Start server in production mode
 npm start
-
-# Or start in development mode with auto-reload
-npm run dev
 ```
-
-### 6. Access the Application
-Open your browser and navigate to:
-```
-http://localhost:3000
-```
+The server serves both the REST API and the Frontend SPA:
+- **Web Application**: [http://localhost:3000](http://localhost:3000)
+- **REST API Base**: [http://localhost:3000/api](http://localhost:3000/api)
 
 ---
 
-## 🔑 Default Credentials
+## 🔑 Demo Login Accounts
 
-| Role | Email | Password |
-|---|---|---|
-| **System Admin** | `admin@brightloop.com` | `Admin@123!` |
-
-*(Recommended: Change password immediately upon first login)*
-
----
-
-## 📡 API Reference Overview
-
-| Method | Endpoint | Description | Auth Required |
+| Role | Email | Plaintext Password | Permissions |
 |---|---|---|---|
-| `POST` | `/api/auth/register` | Register new customer account | No |
-| `POST` | `/api/auth/login` | Login and obtain JWT tokens | No |
-| `POST` | `/api/auth/refresh` | Refresh expired access token | No |
-| `POST` | `/api/auth/logout` | Revoke active refresh token | Yes |
-| `POST` | `/api/auth/forgot-password` | Request password reset email | No |
-| `POST` | `/api/auth/reset-password` | Set new password with token | No |
-| `GET` | `/api/users/me` | Fetch authenticated user profile | Yes |
-| `GET` | `/api/users` | List all users with pagination | Yes (Admin/Staff) |
-| `PUT` | `/api/users/:id/role` | Update user role | Yes (Admin) |
-| `DELETE`| `/api/users/:id` | Deactivate/delete user account | Yes (Admin) |
-| `GET` | `/api/health` | Service health status | No |
+| **Admin** | `admin@brightloop.com` | `Admin@123!` | Full system access, users, staff creation, catalog, subscriptions |
+| **Staff** | `staff@brightloop.com` | `Staff@123!` | Operations, subscriptions, quotations, customer management |
+| **Customer** | `customer@brightloop.com` | `Customer@123!` | Self-service view of own subscriptions, quotations, and price calculator |
+| **Customer** | `acme.corp@example.com` | `Customer@123!` | Acme Industrial Corp account |
 
 ---
 
-## 📄 License
-This project is licensed under the MIT License.
+## 🧪 Automated Testing & Verification
+
+Run all test suites concurrently in parallel using worker processes:
+```bash
+cd backend
+npm test
+# or
+npm run test:parallel
+```
+
+### Modular Test Suites
+```bash
+npm run test:m1          # Module 1: Auth, RBAC, Validation (17 tests)
+npm run test:m2          # Module 2: Products, Variants, Pricing (34 tests)
+npm run test:m3          # Module 3: Subscriptions, Quotations, Lifecycle (41 tests)
+node test_module3_api.js # Live HTTP E2E REST API tests (15 endpoints)
+```
+
+---
+
+## 📚 Technical Documentation
+- [Module 2 Documentation](MODULE_2_DOCUMENTATION.md)
+- [Module 3 Documentation](MODULE_3_DOCUMENTATION.md)

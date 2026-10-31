@@ -97,6 +97,8 @@ const Dashboards = {
     const items = {
       admin: [
         { id: 'dashboard', path: '/dashboard/admin', icon: 'dashboard', label: 'Dashboard' },
+        { id: 'subscriptions', path: '/dashboard/admin/subscriptions', icon: 'auto_stories', label: 'Subscriptions' },
+        { id: 'quotations', path: '/dashboard/admin/quotations', icon: 'request_quote', label: 'Quotations' },
         { id: 'products', path: '/dashboard/admin/products', icon: 'inventory_2', label: 'Products & Variants' },
         { id: 'plans', path: '/dashboard/admin/plans', icon: 'subscriptions', label: 'Subscription Plans' },
         { id: 'taxes', path: '/dashboard/admin/taxes', icon: 'receipt_long', label: 'Tax Rules' },
@@ -108,6 +110,8 @@ const Dashboards = {
       ],
       staff: [
         { id: 'dashboard', path: '/dashboard/staff', icon: 'dashboard', label: 'Dashboard' },
+        { id: 'subscriptions', path: '/dashboard/staff/subscriptions', icon: 'auto_stories', label: 'Subscriptions' },
+        { id: 'quotations', path: '/dashboard/staff/quotations', icon: 'request_quote', label: 'Quotations' },
         { id: 'products', path: '/dashboard/admin/products', icon: 'inventory_2', label: 'Products' },
         { id: 'plans', path: '/dashboard/admin/plans', icon: 'subscriptions', label: 'Plans' },
         { id: 'pricing-calculator', path: '/dashboard/admin/pricing-calculator', icon: 'calculate', label: 'Pricing Calculator' },
@@ -115,6 +119,8 @@ const Dashboards = {
       ],
       customer: [
         { id: 'dashboard', path: '/dashboard/customer', icon: 'dashboard', label: 'Dashboard' },
+        { id: 'subscriptions', path: '/dashboard/customer/subscriptions', icon: 'auto_stories', label: 'My Subscriptions' },
+        { id: 'quotations', path: '/dashboard/customer/quotations', icon: 'request_quote', label: 'My Quotations' },
         { id: 'pricing-calculator', path: '/dashboard/admin/pricing-calculator', icon: 'calculate', label: 'Price Estimator' },
         { id: 'profile', path: '/dashboard/customer/profile', icon: 'person', label: 'My Profile' },
       ]
@@ -125,6 +131,8 @@ const Dashboards = {
   getPageTitle(activePage) {
     const titles = {
       dashboard: 'Dashboard',
+      subscriptions: 'Subscription Management',
+      quotations: 'Quotation & Template Management',
       products: 'Product & Variant Management',
       plans: 'Subscription Plan Management',
       taxes: 'Tax Rule Management',
@@ -524,63 +532,96 @@ const Dashboards = {
 
   // ─── Staff Dashboard ──────────────────────────────────────────────────────────
 
-  staffDashboard() {
+  async staffDashboard() {
     const user = Auth.getUser();
+
+    const [statsRes, subsRes] = await Promise.all([
+      API.get('/subscriptions/stats'),
+      API.get('/subscriptions?limit=5')
+    ]);
+
+    const stats = statsRes.success ? statsRes.data : { total_subscriptions: 0, active_subscriptions: 0, paused_subscriptions: 0, total_quotations: 0, active_annual_value: 0 };
+    const subscriptions = subsRes.success ? subsRes.data.subscriptions : [];
 
     const content = `
       <div class="welcome-banner">
         <h2>Welcome, ${user?.name?.split(' ')[0]} 👋</h2>
-        <p>You have staff access to daily business operations. Use the navigation to manage subscriptions and invoices.</p>
+        <p>Operational workspace for managing customer subscriptions, drafting quotes, and monitoring service agreements.</p>
       </div>
 
-      <div class="stats-grid">
+      <div class="stats-grid mb-4">
         <div class="stat-card primary">
-          <div class="stat-icon">
-            <span class="material-icons-round">assignment</span>
-          </div>
-          <div class="stat-value">—</div>
+          <div class="stat-icon"><span class="material-icons-round">subscriptions</span></div>
+          <div class="stat-value">${stats.active_subscriptions}</div>
           <div class="stat-label">Active Subscriptions</div>
         </div>
         <div class="stat-card success">
-          <div class="stat-icon">
-            <span class="material-icons-round">receipt_long</span>
-          </div>
-          <div class="stat-value">—</div>
-          <div class="stat-label">Pending Invoices</div>
+          <div class="stat-icon"><span class="material-icons-round">request_quote</span></div>
+          <div class="stat-value">${stats.total_quotations}</div>
+          <div class="stat-label">Total Quotations</div>
         </div>
         <div class="stat-card warning">
-          <div class="stat-icon">
-            <span class="material-icons-round">support_agent</span>
-          </div>
-          <div class="stat-value">—</div>
-          <div class="stat-label">Support Tickets</div>
+          <div class="stat-icon"><span class="material-icons-round">pause_circle</span></div>
+          <div class="stat-value">${stats.paused_subscriptions}</div>
+          <div class="stat-label">Paused Contracts</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><span class="material-icons-round">payments</span></div>
+          <div class="stat-value">₹${stats.active_annual_value.toLocaleString('en-IN')}</div>
+          <div class="stat-label">Active Contract Value</div>
         </div>
       </div>
 
-      <div class="info-grid">
-        <div class="info-card">
-          <div class="info-card-header">
-            <div class="info-card-icon">
-              <span class="material-icons-round">subscriptions</span>
-            </div>
-            <h3 class="info-card-title">Subscription Management</h3>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
-            Manage customer subscriptions, process renewals, and handle cancellation requests.
-            This section will be available when Module 2 is integrated.
-          </p>
+      <!-- Quick Action Buttons -->
+      <div class="mb-4 d-flex gap-2">
+        <button class="btn btn-primary" onclick="Module3.openCreateSubscriptionModal()">
+          <span class="material-icons-round">add</span> New Customer Subscription
+        </button>
+        <button class="btn btn-secondary" onclick="Module3.openCreateQuotationModal()">
+          <span class="material-icons-round">request_quote</span> Create Quotation
+        </button>
+        <button class="btn btn-outline" onclick="Router.navigate('/dashboard/staff/subscriptions')">
+          <span class="material-icons-round">list</span> View All Subscriptions
+        </button>
+      </div>
+
+      <!-- Recent Subscriptions -->
+      <div class="card mb-4 p-0 overflow-hidden">
+        <div class="card-header flex-between p-3 border-bottom">
+          <h3 class="card-title text-base">Recent Subscriptions</h3>
+          <a class="text-sm text-primary cursor-pointer" onclick="Router.navigate('/dashboard/staff/subscriptions')">View All &rarr;</a>
         </div>
-        <div class="info-card">
-          <div class="info-card-header">
-            <div class="info-card-icon">
-              <span class="material-icons-round">payments</span>
-            </div>
-            <h3 class="info-card-title">Invoice Processing</h3>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
-            Generate, send, and track invoices for customer subscriptions.
-            This section will be available when Module 3 is integrated.
-          </p>
+        <div class="table-responsive">
+          <table class="table mb-0 text-sm">
+            <thead>
+              <tr>
+                <th>Subscription #</th>
+                <th>Customer</th>
+                <th>Plan</th>
+                <th>Start Date</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th class="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${subscriptions.length === 0 ? `
+                <tr><td colspan="7" class="text-center py-4 text-muted">No subscriptions found.</td></tr>
+              ` : subscriptions.map(s => `
+                <tr>
+                  <td><strong class="font-mono text-primary cursor-pointer" onclick="Module3.viewSubscription(${s.id})">${s.subscription_number}</strong></td>
+                  <td>${s.customer_name}</td>
+                  <td><span class="badge badge-outline-blue">${s.plan_name}</span></td>
+                  <td>${DateUtils.format(s.start_date)}</td>
+                  <td class="font-mono fw-bold">₹${parseFloat(s.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  <td>${Module3.renderStatusBadge(s.status)}</td>
+                  <td class="text-right">
+                    <button class="btn btn-sm btn-outline" onclick="Module3.viewSubscription(${s.id})">Details</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
         </div>
       </div>
     `;
@@ -590,71 +631,100 @@ const Dashboards = {
 
   // ─── Customer Dashboard ───────────────────────────────────────────────────────
 
-  customerDashboard() {
+  async customerDashboard() {
     const user = Auth.getUser();
+
+    const [subsRes, quotesRes] = await Promise.all([
+      API.get('/subscriptions'),
+      API.get('/quotations')
+    ]);
+
+    const subscriptions = subsRes.success ? subsRes.data.subscriptions : [];
+    const quotations = quotesRes.success ? quotesRes.data.quotations : [];
+
+    const activeSubs = subscriptions.filter(s => s.status === 'Active');
+    const totalSpent = subscriptions.reduce((sum, s) => sum + (s.status === 'Active' ? parseFloat(s.total_amount) : 0), 0);
+    const nextRenewalSub = activeSubs[0];
 
     const content = `
       <div class="welcome-banner">
         <h2>Welcome, ${user?.name?.split(' ')[0]} 👋</h2>
-        <p>View and manage your subscriptions, billing history, and account settings from your personal dashboard.</p>
+        <p>Access your active cloud services, subscription plans, and review issued quotes.</p>
       </div>
 
-      <div class="stats-grid">
+      <div class="stats-grid mb-4">
         <div class="stat-card primary">
-          <div class="stat-icon">
-            <span class="material-icons-round">subscriptions</span>
-          </div>
-          <div class="stat-value">—</div>
-          <div class="stat-label">My Subscriptions</div>
+          <div class="stat-icon"><span class="material-icons-round">subscriptions</span></div>
+          <div class="stat-value">${activeSubs.length}</div>
+          <div class="stat-label">Active Subscriptions</div>
         </div>
         <div class="stat-card success">
-          <div class="stat-icon">
-            <span class="material-icons-round">receipt</span>
-          </div>
-          <div class="stat-value">—</div>
-          <div class="stat-label">My Invoices</div>
+          <div class="stat-icon"><span class="material-icons-round">request_quote</span></div>
+          <div class="stat-value">${quotations.length}</div>
+          <div class="stat-label">My Quotations</div>
         </div>
         <div class="stat-card warning">
-          <div class="stat-icon">
-            <span class="material-icons-round">calendar_today</span>
-          </div>
-          <div class="stat-value">—</div>
-          <div class="stat-label">Next Billing</div>
+          <div class="stat-icon"><span class="material-icons-round">calendar_today</span></div>
+          <div class="stat-value text-sm">${nextRenewalSub ? DateUtils.format(nextRenewalSub.expiry_date) : '—'}</div>
+          <div class="stat-label">Next Renewal Date</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><span class="material-icons-round">payments</span></div>
+          <div class="stat-value font-mono">₹${totalSpent.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+          <div class="stat-label">Current Active Billing</div>
         </div>
       </div>
 
-      <div class="info-grid">
-        <div class="info-card">
-          <div class="info-card-header">
-            <div class="info-card-icon">
-              <span class="material-icons-round">list_alt</span>
-            </div>
-            <h3 class="info-card-title">Your Subscriptions</h3>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
-            View your active subscriptions, manage plans, and track renewal dates.
-            This section will be available when the Subscription module is integrated.
-          </p>
-          <button class="btn btn-outline btn-sm" style="margin-top: 16px;" disabled>
-            <span class="material-icons-round" style="font-size: 16px;">visibility</span>
-            View Subscriptions
-          </button>
+      <!-- Quick Action Navigation -->
+      <div class="mb-4 d-flex gap-2">
+        <button class="btn btn-primary" onclick="Router.navigate('/dashboard/customer/subscriptions')">
+          <span class="material-icons-round">auto_stories</span> View My Subscriptions
+        </button>
+        <button class="btn btn-secondary" onclick="Router.navigate('/dashboard/customer/quotations')">
+          <span class="material-icons-round">request_quote</span> View My Quotations
+        </button>
+        <button class="btn btn-outline" onclick="Router.navigate('/dashboard/admin/pricing-calculator')">
+          <span class="material-icons-round">calculate</span> Explore Plans & Simulator
+        </button>
+      </div>
+
+      <!-- Customer Subscriptions List -->
+      <div class="card p-0 mb-4 overflow-hidden">
+        <div class="card-header flex-between p-3 border-bottom">
+          <h3 class="card-title text-base">My Subscriptions</h3>
+          <a class="text-sm text-primary cursor-pointer" onclick="Router.navigate('/dashboard/customer/subscriptions')">View All &rarr;</a>
         </div>
-        <div class="info-card">
-          <div class="info-card-header">
-            <div class="info-card-icon">
-              <span class="material-icons-round">description</span>
-            </div>
-            <h3 class="info-card-title">Your Invoices</h3>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
-            Access your billing history, download invoices, and review payment records.
-            This section will be available when the Invoice module is integrated.
-          </p>
-          <button class="btn btn-outline btn-sm" style="margin-top: 16px;" disabled>
-            <span class="material-icons-round" style="font-size: 16px;">download</span>
-            View Invoices
-          </button>
+        <div class="table-responsive">
+          <table class="table mb-0 text-sm">
+            <thead>
+              <tr>
+                <th>Subscription #</th>
+                <th>Plan Name</th>
+                <th>Billing Cycle</th>
+                <th>Current Period</th>
+                <th>Total Payable</th>
+                <th>Status</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${subscriptions.length === 0 ? `
+                <tr><td colspan="7" class="text-center py-4 text-muted">You have no active subscriptions yet.</td></tr>
+              ` : subscriptions.map(s => `
+                <tr>
+                  <td><strong class="font-mono text-primary cursor-pointer" onclick="Module3.viewSubscription(${s.id})">${s.subscription_number}</strong></td>
+                  <td><strong>${s.plan_name}</strong></td>
+                  <td><span class="text-capitalize">${s.billing_frequency}</span></td>
+                  <td>${DateUtils.format(s.start_date)} – ${DateUtils.format(s.expiry_date)}</td>
+                  <td class="font-mono fw-bold">₹${parseFloat(s.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  <td>${Module3.renderStatusBadge(s.status)}</td>
+                  <td class="text-right">
+                    <button class="btn btn-sm btn-outline" onclick="Module3.viewSubscription(${s.id})">Details</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
         </div>
       </div>
     `;

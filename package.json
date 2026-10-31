@@ -27,5 +27,8 @@
     "invoicing"
   ],
   "author": "Brightloop Software",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "puppeteer-core": "^25.16.0"
+  }
 }

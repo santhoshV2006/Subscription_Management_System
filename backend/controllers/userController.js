@@ -40,7 +40,7 @@ exports.getAllUsers = async (req, res) => {
     const total = db.prepare(countQuery).get(...params).total;
 
     const users = db.prepare(`
-      SELECT u.uuid, u.name, u.email, u.is_active, u.email_verified, u.last_login, u.created_at, r.name as role
+      SELECT u.id, u.uuid, u.name, u.email, u.is_active, u.email_verified, u.last_login, u.created_at, r.name as role
       FROM users u JOIN roles r ON u.role_id = r.id
       ${whereClause}
       ORDER BY u.created_at DESC
@@ -75,7 +75,7 @@ exports.getUserByUuid = async (req, res) => {
     const { uuid } = req.params;
 
     const user = db.prepare(`
-      SELECT u.uuid, u.name, u.email, u.is_active, u.email_verified, u.last_login, u.created_at, u.updated_at, r.name as role
+      SELECT u.id, u.uuid, u.name, u.email, u.is_active, u.email_verified, u.last_login, u.created_at, u.updated_at, r.name as role
       FROM users u JOIN roles r ON u.role_id = r.id
       WHERE u.uuid = ?
     `).get(uuid);

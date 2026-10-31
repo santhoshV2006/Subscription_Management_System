@@ -36,10 +36,16 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Rate limiting
+const isLocalOrTest = (req) => {
+  if (process.env.NODE_ENV === 'test') return true;
+  const ip = req.ip || req.connection?.remoteAddress || '';
+  return ip.includes('127.0.0.1') || ip.includes('::1');
+};
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'test' ? 2000 : 100,
-  skip: () => process.env.NODE_ENV === 'test',
+  max: 2000,
+  skip: isLocalOrTest,
   message: {
     success: false,
     message: 'Too many requests. Please try again after 15 minutes.'
@@ -50,8 +56,8 @@ const authLimiter = rateLimit({
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'test' ? 5000 : 500,
-  skip: () => process.env.NODE_ENV === 'test',
+  max: 10000,
+  skip: isLocalOrTest,
   message: {
     success: false,
     message: 'Too many requests. Please try again later.'

@@ -193,10 +193,16 @@ exports.createSubscription = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Customer ID is required.' });
     }
 
-    const customer = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(Number(targetCustomerId));
+    let customer;
+    if (typeof targetCustomerId === 'number' || !isNaN(Number(targetCustomerId))) {
+      customer = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(Number(targetCustomerId));
+    } else {
+      customer = db.prepare('SELECT id, name, email FROM users WHERE uuid = ?').get(targetCustomerId);
+    }
     if (!customer) {
       return res.status(404).json({ success: false, message: 'Customer not found.' });
     }
+    targetCustomerId = customer.id;
 
     if (!plan_id) {
       return res.status(400).json({ success: false, message: 'Subscription plan is required.' });

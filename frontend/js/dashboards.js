@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Brightloop — Dashboard Views (Admin, Staff, Customer)
  */
 const Dashboards = {
@@ -100,6 +100,7 @@ const Dashboards = {
         { id: 'subscriptions', path: '/dashboard/admin/subscriptions', icon: 'auto_stories', label: 'Subscriptions' },
         { id: 'quotations', path: '/dashboard/admin/quotations', icon: 'request_quote', label: 'Quotations' },
         { id: 'invoices', path: '/dashboard/admin/invoices', icon: 'receipt_long', label: 'Invoices' },
+        { id: 'financial', path: '/dashboard/admin/financial', icon: 'bar_chart', label: 'Financial Reports' },
         { id: 'products', path: '/dashboard/admin/products', icon: 'inventory_2', label: 'Products & Variants' },
         { id: 'plans', path: '/dashboard/admin/plans', icon: 'subscriptions', label: 'Subscription Plans' },
         { id: 'taxes', path: '/dashboard/admin/taxes', icon: 'receipt_long', label: 'Tax Rules' },
@@ -114,6 +115,7 @@ const Dashboards = {
         { id: 'subscriptions', path: '/dashboard/staff/subscriptions', icon: 'auto_stories', label: 'Subscriptions' },
         { id: 'quotations', path: '/dashboard/staff/quotations', icon: 'request_quote', label: 'Quotations' },
         { id: 'invoices', path: '/dashboard/staff/invoices', icon: 'receipt_long', label: 'Invoices' },
+        { id: 'financial', path: '/dashboard/staff/financial', icon: 'bar_chart', label: 'Financial Reports' },
         { id: 'products', path: '/dashboard/admin/products', icon: 'inventory_2', label: 'Products' },
         { id: 'plans', path: '/dashboard/admin/plans', icon: 'subscriptions', label: 'Plans' },
         { id: 'pricing-calculator', path: '/dashboard/admin/pricing-calculator', icon: 'calculate', label: 'Pricing Calculator' },
@@ -137,6 +139,7 @@ const Dashboards = {
       subscriptions: 'Subscription Management',
       quotations: 'Quotation & Template Management',
       invoices: 'Invoice Management',
+      financial: 'Financial Dashboard \& Reports',
       products: 'Product & Variant Management',
       plans: 'Subscription Plan Management',
       taxes: 'Tax Rule Management',

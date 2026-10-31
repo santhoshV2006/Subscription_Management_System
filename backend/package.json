@@ -14,7 +14,9 @@
     "test:m2": "node test_module2.js",
     "test:m3": "node test_module3.js",
     "test:m4": "node test_module4.js",
-    "test:m4:api": "node test_module4_api.js"
+    "test:m4:api": "node test_module4_api.js",
+    "test:m5:api": "node test_module5_api.js",
+    "test:buttons": "node test_all_buttons_and_modals.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

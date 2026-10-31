@@ -23,6 +23,7 @@ const Router = {
       '/dashboard/admin/subscriptions': { page: 'adminSubscriptions', auth: true, roles: ['admin', 'staff'] },
       '/dashboard/admin/quotations': { page: 'adminQuotations', auth: true, roles: ['admin', 'staff'] },
       '/dashboard/admin/invoices': { page: 'adminInvoices', auth: true, roles: ['admin', 'staff'] },
+      '/dashboard/admin/financial': { page: 'financialDashboard', auth: true, roles: ['admin', 'staff'] },
       '/dashboard/admin/products': { page: 'adminProducts', auth: true, roles: ['admin', 'staff'] },
       '/dashboard/admin/plans': { page: 'adminPlans', auth: true, roles: ['admin', 'staff'] },
       '/dashboard/admin/taxes': { page: 'adminTaxes', auth: true, roles: ['admin'] },
@@ -37,6 +38,7 @@ const Router = {
       '/dashboard/staff/subscriptions': { page: 'adminSubscriptions', auth: true, roles: ['staff'] },
       '/dashboard/staff/quotations': { page: 'adminQuotations', auth: true, roles: ['staff'] },
       '/dashboard/staff/invoices': { page: 'adminInvoices', auth: true, roles: ['staff'] },
+      '/dashboard/staff/financial': { page: 'financialDashboard', auth: true, roles: ['staff'] },
       '/dashboard/staff/profile': { page: 'profilePage', auth: true, roles: ['staff'] },
 
       // Customer routes
@@ -162,6 +164,9 @@ const Router = {
           break;
         case 'adminInvoices':
           html = await Module4.invoicesPage(this.queryParams);
+          break;
+        case 'financialDashboard':
+          html = await FinancialDashboard.financialDashboardPage(this.queryParams);
           break;
         case 'customerSubscriptions':
           html = await Module3.subscriptionsPage(this.queryParams);

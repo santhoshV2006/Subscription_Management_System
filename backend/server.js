@@ -68,6 +68,8 @@ app.use('/api/plans', require('./routes/plans'));
 app.use('/api/taxes', require('./routes/taxes'));
 app.use('/api/discounts', require('./routes/discounts'));
 app.use('/api/pricing', require('./routes/pricing'));
+app.use('/api/subscriptions', require('./routes/subscriptions'));
+app.use('/api/quotations', require('./routes/quotations'));
 
 // Health check
 app.get('/api/health', (req, res) => {

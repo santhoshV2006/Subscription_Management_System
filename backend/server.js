@@ -14,9 +14,15 @@ const PORT = process.env.PORT || 3000;
 
 // ─── Middleware ──────────────────────────────────────────────────────────────────
 
-// CORS
+// CORS: Support standalone frontend running on port 5000, 5500, 5173, etc.
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5500',
+  origin: (origin, callback) => {
+    // Allow server-to-server, curl, same-origin, or any localhost / 127.0.0.1 port
+    if (!origin || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']

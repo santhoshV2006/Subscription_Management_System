@@ -1,0 +1,16 @@
+{
+  "name": "brightloop-frontend",
+  "version": "1.0.0",
+  "description": "Brightloop Software - Frontend Standalone Server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "frontend",
+    "brightloop"
+  ],
+  "author": "Brightloop Software",
+  "license": "ISC"
+}

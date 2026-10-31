@@ -164,6 +164,160 @@ function initializeDatabase() {
       FOREIGN KEY (discount_id) REFERENCES discounts(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
     );
+
+    /* ─── MODULE 3: Subscription & Quotation Management ───────────────── */
+
+    CREATE TABLE IF NOT EXISTS quotation_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      description TEXT,
+      plan_id INTEGER,
+      default_validity_days INTEGER NOT NULL DEFAULT 30,
+      payment_terms TEXT NOT NULL DEFAULT 'Net 30',
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (plan_id) REFERENCES subscription_plans(id) ON DELETE SET NULL,
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS quotation_template_lines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      template_id INTEGER NOT NULL,
+      product_id INTEGER NOT NULL,
+      variant_id INTEGER,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (template_id) REFERENCES quotation_templates(id) ON DELETE CASCADE,
+      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+      FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS quotations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT NOT NULL UNIQUE,
+      quotation_number TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      template_id INTEGER,
+      customer_id INTEGER NOT NULL,
+      plan_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Draft' CHECK(status IN ('Draft', 'Sent', 'Accepted', 'Rejected', 'Expired', 'Converted')),
+      validity_days INTEGER NOT NULL DEFAULT 30,
+      issue_date DATE NOT NULL,
+      valid_until DATE NOT NULL,
+      payment_terms TEXT NOT NULL DEFAULT 'Net 30',
+      subtotal REAL NOT NULL DEFAULT 0.0,
+      discount_id INTEGER,
+      discount_code TEXT,
+      discount_amount REAL NOT NULL DEFAULT 0.0,
+      tax_amount REAL NOT NULL DEFAULT 0.0,
+      total_amount REAL NOT NULL DEFAULT 0.0,
+      notes TEXT,
+      converted_subscription_id INTEGER,
+      created_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (template_id) REFERENCES quotation_templates(id) ON DELETE SET NULL,
+      FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE RESTRICT,
+      FOREIGN KEY (plan_id) REFERENCES subscription_plans(id) ON DELETE RESTRICT,
+      FOREIGN KEY (discount_id) REFERENCES discounts(id) ON DELETE SET NULL,
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS quotation_lines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      quotation_id INTEGER NOT NULL,
+      product_id INTEGER NOT NULL,
+      variant_id INTEGER,
+      product_name TEXT NOT NULL,
+      variant_name TEXT,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      base_unit_price REAL NOT NULL DEFAULT 0.0,
+      variant_additional_price REAL NOT NULL DEFAULT 0.0,
+      unit_price REAL NOT NULL DEFAULT 0.0,
+      gross_amount REAL NOT NULL DEFAULT 0.0,
+      tax_id INTEGER,
+      tax_rate REAL NOT NULL DEFAULT 0.0,
+      tax_amount REAL NOT NULL DEFAULT 0.0,
+      line_total REAL NOT NULL DEFAULT 0.0,
+      FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE CASCADE,
+      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+      FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE SET NULL,
+      FOREIGN KEY (tax_id) REFERENCES taxes(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT NOT NULL UNIQUE,
+      subscription_number TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      customer_id INTEGER NOT NULL,
+      plan_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Draft' CHECK(status IN ('Draft', 'Quotation', 'Confirmed', 'Active', 'Paused', 'Closed')),
+      start_date DATE NOT NULL,
+      expiry_date DATE NOT NULL,
+      payment_terms TEXT NOT NULL DEFAULT 'Net 30',
+      subtotal REAL NOT NULL DEFAULT 0.0,
+      discount_id INTEGER,
+      discount_code TEXT,
+      discount_amount REAL NOT NULL DEFAULT 0.0,
+      tax_amount REAL NOT NULL DEFAULT 0.0,
+      total_amount REAL NOT NULL DEFAULT 0.0,
+      currency TEXT NOT NULL DEFAULT 'INR',
+      notes TEXT,
+      quotation_id INTEGER,
+      closed_at DATETIME,
+      closure_reason TEXT,
+      paused_at DATETIME,
+      renewed_from_id INTEGER,
+      created_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE RESTRICT,
+      FOREIGN KEY (plan_id) REFERENCES subscription_plans(id) ON DELETE RESTRICT,
+      FOREIGN KEY (discount_id) REFERENCES discounts(id) ON DELETE SET NULL,
+      FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE SET NULL,
+      FOREIGN KEY (renewed_from_id) REFERENCES subscriptions(id) ON DELETE SET NULL,
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS subscription_lines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT NOT NULL UNIQUE,
+      subscription_id INTEGER NOT NULL,
+      product_id INTEGER NOT NULL,
+      variant_id INTEGER,
+      product_name TEXT NOT NULL,
+      variant_name TEXT,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      base_unit_price REAL NOT NULL DEFAULT 0.0,
+      variant_additional_price REAL NOT NULL DEFAULT 0.0,
+      unit_price REAL NOT NULL DEFAULT 0.0,
+      gross_amount REAL NOT NULL DEFAULT 0.0,
+      tax_id INTEGER,
+      tax_rate REAL NOT NULL DEFAULT 0.0,
+      tax_amount REAL NOT NULL DEFAULT 0.0,
+      line_total REAL NOT NULL DEFAULT 0.0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE CASCADE,
+      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+      FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE SET NULL,
+      FOREIGN KEY (tax_id) REFERENCES taxes(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS subscription_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      subscription_id INTEGER NOT NULL,
+      action TEXT NOT NULL,
+      from_status TEXT,
+      to_status TEXT,
+      changed_by INTEGER,
+      notes TEXT,
+      metadata TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE CASCADE,
+      FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
+    );
   `);
 
   // Seed default roles if they don't exist
@@ -176,8 +330,55 @@ function initializeDatabase() {
     console.log('✅ Default roles seeded');
   }
 
-  // Run initial auto-closure check on expired plans
+  // Run initial auto-closure check on expired plans and subscriptions
   checkAndCloseExpiredPlans();
+  checkAndExpireSubscriptions();
+}
+
+/**
+ * Automatically expire and close subscriptions that have passed their expiry date.
+ */
+function checkAndExpireSubscriptions() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const expiredSubs = db.prepare(`
+      SELECT id, subscription_number, expiry_date, customer_id
+      FROM subscriptions
+      WHERE status = 'Active'
+        AND date(expiry_date) < date(?)
+    `).all(today);
+
+    if (expiredSubs.length > 0) {
+      const updateSub = db.prepare(`
+        UPDATE subscriptions
+        SET status = 'Closed',
+            closed_at = CURRENT_TIMESTAMP,
+            closure_reason = 'Term ended on ' || expiry_date || ' (Automatic Expiry)',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `);
+
+      const insertHistory = db.prepare(`
+        INSERT INTO subscription_history (subscription_id, action, from_status, to_status, notes)
+        VALUES (?, 'AUTO_EXPIRE', 'Active', 'Closed', ?)
+      `);
+
+      const insertLog = db.prepare(`
+        INSERT INTO activity_logs (user_id, action, details)
+        VALUES (?, 'SUBSCRIPTION_AUTO_EXPIRED', ?)
+      `);
+
+      for (const sub of expiredSubs) {
+        updateSub.run(sub.id);
+        insertHistory.run(sub.id, `Subscription automatically closed upon reaching expiry date (${sub.expiry_date})`);
+        insertLog.run(sub.customer_id, `Subscription ${sub.subscription_number} automatically expired.`);
+      }
+
+      console.log(`ℹ️ Auto-expired and closed ${expiredSubs.length} subscription(s).`);
+    }
+  } catch (err) {
+    console.error('Error during automatic subscription expiry check:', err);
+  }
 }
 
 /**
@@ -219,4 +420,4 @@ function checkAndCloseExpiredPlans() {
   }
 }
 
-module.exports = { db, initializeDatabase, checkAndCloseExpiredPlans };
+module.exports = { db, initializeDatabase, checkAndCloseExpiredPlans, checkAndExpireSubscriptions };

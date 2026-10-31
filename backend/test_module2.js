@@ -3,6 +3,7 @@
  * Products, Plans, Variants, Taxes and Discounts
  */
 const { db, checkAndCloseExpiredPlans } = require('./config/database');
+const { seedAllMockData } = require('./seed_mock_data');
 const { calculatePrice, evaluateDiscountEligibility, recordDiscountUsage } = require('./utils/pricingEngine');
 
 let passedTests = 0;
@@ -22,6 +23,7 @@ async function runTests() {
   console.log('\n🧪 Running Test Suite: Brightloop Module 2...\n');
 
   try {
+    await seedAllMockData();
     // 1. Product & Variant Surcharge Test (Odoo brand adds ₹560)
     console.log('--- 1. Product & Variant Additional Price ---');
     const erpProduct = db.prepare("SELECT * FROM products WHERE name = 'Cloud ERP Suite'").get();

@@ -377,7 +377,10 @@ exports.resumeSubscription = async (req, res) => {
     const isNum = !isNaN(Number(id));
 
     const sub = db.prepare(`
-      SELECT * FROM subscriptions WHERE ${isNum ? 's.id = ?' : 'uuid = ?'}
+      SELECT s.*, sp.name as plan_name
+      FROM subscriptions s
+      JOIN subscription_plans sp ON s.plan_id = sp.id
+      WHERE ${isNum ? 's.id = ?' : 's.uuid = ?'}
     `).get(isNum ? Number(id) : id);
 
     if (!sub) {

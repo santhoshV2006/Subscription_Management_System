@@ -23,6 +23,23 @@ async function seedAllMockData() {
   try {
     initializeDatabase();
 
+    db.pragma('foreign_keys = OFF');
+    db.prepare('DELETE FROM subscription_history').run();
+    db.prepare('DELETE FROM subscription_lines').run();
+    db.prepare('DELETE FROM subscriptions').run();
+    db.prepare('DELETE FROM quotation_lines').run();
+    db.prepare('DELETE FROM quotations').run();
+    db.prepare('DELETE FROM quotation_template_lines').run();
+    db.prepare('DELETE FROM quotation_templates').run();
+    db.prepare('DELETE FROM discount_usages').run();
+    db.prepare('DELETE FROM discounts').run();
+    db.prepare('DELETE FROM product_variants').run();
+    db.prepare('DELETE FROM products').run();
+    db.prepare('DELETE FROM taxes').run();
+    db.prepare('DELETE FROM refresh_tokens').run();
+    db.prepare('DELETE FROM activity_logs').run();
+    db.pragma('foreign_keys = ON');
+
     // ─────────────────────────────────────────────────────────────────────────
     // 1. ROLES & USERS (Module 1)
     // ─────────────────────────────────────────────────────────────────────────
@@ -38,8 +55,13 @@ async function seedAllMockData() {
     const custPassHash = await bcrypt.hash('Customer@123!', salt);
 
     const insertUser = db.prepare(`
-      INSERT OR REPLACE INTO users (id, uuid, name, email, password, role_id, is_active, email_verified, created_at)
+      INSERT INTO users (id, uuid, name, email, password, role_id, is_active, email_verified, created_at)
       VALUES (?, ?, ?, ?, ?, ?, 1, 1, CURRENT_TIMESTAMP)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        email = excluded.email,
+        password = excluded.password,
+        role_id = excluded.role_id
     `);
 
     // Ensure fixed IDs for predictable seeding
@@ -84,6 +106,7 @@ async function seedAllMockData() {
     insertProd.run(2, uuidv4(), 'Bright Analytics Pro', 'service', 1800.0, 600.0, 'BI dashboards and automated forecasting', 1);
     insertProd.run(3, uuidv4(), 'Secure Guard Anti-Malware', 'service', 750.0, 250.0, 'Enterprise endpoint telemetry and firewall protection', 1);
     insertProd.run(4, uuidv4(), 'CRM Omnichannel Desk', 'service', 1200.0, 450.0, 'Unified WhatsApp, Email and Live Chat CRM', 1);
+    insertProd.run(5, uuidv4(), 'API Integration Expansion Pack', 'consumable', 499.0, 50.0, '100,000 API calls per month for external system integrations and zapier triggers.', 1);
 
     // Product Variants (e.g. Odoo Edition +₹560 as requested in prompt)
     const insertVariant = db.prepare(`
@@ -92,7 +115,7 @@ async function seedAllMockData() {
     `);
     // Variants for Cloud ERP Suite
     insertVariant.run(1, uuidv4(), 1, 'Brand', 'Standard Community Edition', 'ERP-STD', 0.0, 0.0);
-    insertVariant.run(2, uuidv4(), 1, 'Brand', 'Odoo Enterprise Edition', 'ERP-ODOO-560', 560.0, 200.0);
+    insertVariant.run(2, uuidv4(), 1, 'Brand', 'Odoo Edition', 'ERP-ODOO-560', 560.0, 200.0);
     insertVariant.run(3, uuidv4(), 1, 'Brand', 'SAP Connected Suite', 'ERP-SAP-PLUS', 1200.0, 400.0);
 
     // Variants for Analytics Pro
@@ -124,9 +147,10 @@ async function seedAllMockData() {
     insertPlan.run(2, uuidv4(), 1, 'Weekly Sprint Server', 'WEEKLY-SPRINT', 'Weekly billing license for Agile project duration', 'weekly', 1200.0, 1, '2024-01-01', '2030-12-31', 1, 1, 1, 1, 0, 'active');
     insertPlan.run(3, uuidv4(), 1, 'Monthly Professional SaaS', 'MONTHLY-PRO', 'Standard monthly billing plan with full feature support', 'monthly', 2400.0, 1, '2024-01-01', '2030-12-31', 1, 1, 1, 1, 14, 'active');
     insertPlan.run(4, uuidv4(), 1, 'Annual Enterprise Cloud', 'ANNUAL-ENT', 'Annual commitment with 20% built-in value and dedicated SLA', 'yearly', 24000.0, 1, '2024-01-01', '2030-12-31', 1, 0, 1, 1, 30, 'active');
-    insertPlan.run(5, uuidv4(), 1, 'Cloud ERP Team License (Min 3 Users)', 'TEAM-MIN3', 'Special team multi-seat license requiring minimum 3 seats', 'monthly', 6500.0, 3, '2024-01-01', '2030-12-31', 1, 1, 1, 1, 7, 'active');
+    insertPlan.run(5, uuidv4(), 1, 'Cloud ERP Team License (Min 3 Users)', 'PLAN-ERP-TEAM', 'Special team multi-seat license requiring minimum 3 seats', 'monthly', 6500.0, 3, '2024-01-01', '2030-12-31', 1, 1, 1, 1, 7, 'active');
+    insertPlan.run(6, uuidv4(), 1, 'Legacy 2023 Early Access Plan', 'PLAN-LEGACY-2023', 'Promotional introductory package expired at close of 2023', 'monthly', 999.0, 1, '2023-01-01', '2023-12-31', 1, 1, 1, 1, 0, 'active');
 
-    console.log('   ✓ Seeded 5 Subscription Plans (Daily, Weekly, Monthly, Yearly, Team Multi-seat)');
+    console.log('   ✓ Seeded 6 Subscription Plans (Daily, Weekly, Monthly, Yearly, Team Multi-seat, Legacy Expired)');
 
     // Discounts
     db.prepare('DELETE FROM discounts').run();

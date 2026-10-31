@@ -63,7 +63,11 @@ const Router = {
    * Resolve the current route.
    */
   async resolve() {
-    let path = window.location.hash.slice(1) || '/login';
+    let path = window.location.hash.slice(1);
+    if (!path && window.location.pathname && window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+      path = window.location.pathname;
+    }
+    if (!path) path = '/login';
 
     // Handle reset-password with query params
     if (path.includes('?')) {

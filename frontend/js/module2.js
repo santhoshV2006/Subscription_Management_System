@@ -1742,6 +1742,7 @@ const Module2 = {
     } else {
       Toast.error('Failed', res.message || 'Could not save discount.');
     }
+    return res;
   },
 
   async openDiscountUsageModal(discountId) {
@@ -2251,3 +2252,5 @@ Generated at: ${new Date().toLocaleString()}
     Toast.success('Quotation Copied', 'Quotation summary copied to clipboard.');
   }
 };
+
+window.Module2 = Module2;

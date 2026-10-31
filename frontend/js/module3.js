@@ -167,6 +167,9 @@ const Module3 = {
                               <span class="material-icons-round">cancel</span>
                             </button>
                           ` : ''}
+                          <button class="btn btn-sm btn-outline text-purple" onclick="Module3.viewInvoicePayload(${sub.id})" title="View Module 4 Invoice Payload">
+                            <span class="material-icons-round">receipt</span>
+                          </button>
                         ` : ''}
                       </div>
                     </td>
@@ -396,15 +399,15 @@ const Module3 = {
       <form id="create-sub-form" onsubmit="event.preventDefault(); Module3.submitCreateSubscription();">
         <div class="grid grid-2 gap-3 mb-3">
           <div class="form-group mb-0">
-            <label class="form-label">Customer <span class="text-danger">*</span></label>
+            <label class="form-label" for="sub-customer-id">Customer <span class="text-danger">*</span></label>
             <select id="sub-customer-id" class="form-control" required>
               <option value="">Select customer...</option>
-              ${customers.map(c => `<option value="${c.uuid}">${c.name} (${c.email})</option>`).join('')}
+              ${customers.map(c => `<option value="${c.id || c.uuid}">${c.name} (${c.email})</option>`).join('')}
             </select>
           </div>
           <div class="form-group mb-0">
-            <label class="form-label">Subscription Plan <span class="text-danger">*</span></label>
-            <select id="sub-plan-id" class="form-control" required onchange="Module3.refreshSubPricePreview()">
+            <label class="form-label" for="sub-plan-id">Subscription Plan <span class="text-danger">*</span></label>
+            <select id="sub-plan-id" class="form-control" required onchange="Module3.onPlanChange()">
               <option value="">Select plan...</option>
               ${plans.map(p => `<option value="${p.id}" data-freq="${p.billing_frequency}" data-min="${p.min_quantity}">${p.name} (${p.billing_frequency}) - Min: ${p.min_quantity}</option>`).join('')}
             </select>
@@ -413,33 +416,43 @@ const Module3 = {
 
         <div class="grid grid-3 gap-3 mb-3">
           <div class="form-group mb-0">
-            <label class="form-label">Start Date</label>
+            <label class="form-label" for="sub-start-date">Start Date</label>
             <input type="date" id="sub-start-date" class="form-control" value="${new Date().toISOString().split('T')[0]}">
           </div>
           <div class="form-group mb-0">
-            <label class="form-label">Payment Terms</label>
+            <label class="form-label" for="sub-payment-terms">Payment Terms</label>
             <select id="sub-payment-terms" class="form-control">
-              <option value="Net 30">Net 30</option>
-              <option value="Net 15">Net 15</option>
-              <option value="Net 60">Net 60</option>
-              <option value="Immediate">Immediate / Due upon receipt</option>
+              <option value="Net 30">Net 30 Days</option>
+              <option value="Net 15">Net 15 Days</option>
+              <option value="Net 60">Net 60 Days</option>
+              <option value="Immediate">Immediate / Due Upon Receipt</option>
             </select>
           </div>
           <div class="form-group mb-0">
-            <label class="form-label">Discount Coupon Code</label>
-            <div class="d-flex gap-1">
-              <input type="text" id="sub-discount-code" class="form-control text-uppercase" placeholder="e.g. BRIGHT20" onchange="Module3.refreshSubPricePreview()">
-            </div>
+            <label class="form-label" for="sub-discount-code">Discount Coupon</label>
+            <input type="text" id="sub-discount-code" class="form-control text-uppercase" placeholder="e.g. BRIGHT20" onchange="Module3.refreshSubPricePreview()">
           </div>
         </div>
 
-        <!-- Product Line Items Builder -->
-        <div class="border rounded p-3 mb-3 bg-white">
-          <div class="flex-between mb-2">
-            <strong class="text-sm">Subscription Line Items</strong>
+        <!-- Product Line Items Builder Card -->
+        <div class="sub-lines-card">
+          <div class="sub-lines-card-header">
+            <div>
+              <strong style="font-size: 13.5px; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                <span class="material-icons-round" style="font-size: 18px; color: var(--primary-600);">inventory_2</span>
+                Subscription Line Items
+              </strong>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Select products, brand/edition variants, and quantities</div>
+            </div>
             <button type="button" class="btn btn-sm btn-outline" onclick="Module3.addSubLineRow()">
-              <span class="material-icons-round">add</span> Add Product Line
+              <span class="material-icons-round" style="font-size: 16px;">add</span> Add Line Item
             </button>
+          </div>
+          <div class="sub-line-col-headers">
+            <div>Product</div>
+            <div>Variant / Surcharge</div>
+            <div style="text-align: center;">Qty</div>
+            <div></div>
           </div>
           <div id="sub-lines-container">
             <!-- Dynamic rows will appear here -->
@@ -447,12 +460,14 @@ const Module3 = {
         </div>
 
         <!-- Live Price Preview Card -->
-        <div id="sub-price-preview" class="p-3 bg-light rounded text-sm mb-3">
-          <div class="text-muted text-center py-2">Select a plan and product lines to preview calculation.</div>
+        <div id="sub-price-preview" class="pricing-summary-card">
+          <div style="color: var(--text-muted); text-align: center; font-size: 13px;">
+            Select a plan and product lines to compute the live billing breakdown.
+          </div>
         </div>
 
         <div class="form-group mb-0">
-          <label class="form-label">Internal Notes / Contract Remarks</label>
+          <label class="form-label" for="sub-notes">Internal Notes / Contract Remarks</label>
           <textarea id="sub-notes" class="form-control" rows="2" placeholder="Optional notes..."></textarea>
         </div>
       </form>
@@ -484,7 +499,7 @@ const Module3 = {
     const rowIndex = container.children.length;
 
     const row = document.createElement('div');
-    row.className = 'grid grid-3 gap-2 mb-2 align-items-center sub-line-row';
+    row.className = 'sub-line-row';
     row.id = `sub-line-row-${rowIndex}`;
     row.innerHTML = `
       <div>
@@ -498,10 +513,12 @@ const Module3 = {
           <option value="">Standard Edition (+₹0)</option>
         </select>
       </div>
-      <div class="d-flex gap-1 align-items-center">
-        <input type="number" class="form-control form-control-sm line-qty-input" value="1" min="1" style="width: 70px;" onchange="Module3.refreshSubPricePreview()" onkeyup="Module3.refreshSubPricePreview()">
-        <button type="button" class="btn btn-sm btn-outline text-danger p-1" onclick="this.closest('.sub-line-row').remove(); Module3.refreshSubPricePreview();" title="Remove line">
-          <span class="material-icons-round">delete</span>
+      <div>
+        <input type="number" class="form-control form-control-sm line-qty-input" value="1" min="1" placeholder="Qty" onchange="Module3.refreshSubPricePreview()" onkeyup="Module3.refreshSubPricePreview()" style="text-align: center;">
+      </div>
+      <div>
+        <button type="button" class="sub-line-delete-btn" onclick="this.closest('.sub-line-row').remove(); Module3.refreshSubPricePreview();" title="Remove line">
+          <span class="material-icons-round" style="font-size: 18px;">delete</span>
         </button>
       </div>
     `;
@@ -529,6 +546,18 @@ const Module3 = {
     this.refreshSubPricePreview();
   },
 
+  onPlanChange() {
+    const planSelect = document.getElementById('sub-plan-id');
+    const selectedOpt = planSelect?.options[planSelect.selectedIndex];
+    const minQty = parseInt(selectedOpt?.dataset.min || '1', 10);
+    const qtyInput = document.querySelector('.line-qty-input');
+    if (qtyInput && parseInt(qtyInput.value, 10) < minQty) {
+      qtyInput.value = minQty;
+      qtyInput.min = minQty;
+    }
+    this.refreshSubPricePreview();
+  },
+
   async refreshSubPricePreview() {
     const planId = document.getElementById('sub-plan-id')?.value;
     const discountCode = document.getElementById('sub-discount-code')?.value.trim();
@@ -537,7 +566,7 @@ const Module3 = {
     if (!previewEl) return;
 
     if (!planId || rows.length === 0) {
-      previewEl.innerHTML = '<div class="text-muted text-center py-2">Select a plan and product lines to preview calculation.</div>';
+      previewEl.innerHTML = '<div style="color: var(--text-muted); text-align: center; font-size: 13px;">Select a plan and product lines to preview calculation.</div>';
       return;
     }
 
@@ -552,7 +581,7 @@ const Module3 = {
     });
 
     if (lines.length === 0) {
-      previewEl.innerHTML = '<div class="text-muted text-center py-2">Add at least one product line.</div>';
+      previewEl.innerHTML = '<div style="color: var(--text-muted); text-align: center; font-size: 13px;">Add at least one product line.</div>';
       return;
     }
 
@@ -565,28 +594,33 @@ const Module3 = {
       discount_code: discountCode || null
     });
 
-    if (res.success && res.data) {
-      const b = res.data.pricing_breakdown;
+    const breakdown = res.data?.pricing_breakdown || res.data?.calculation?.pricing_breakdown || res.calculation?.pricing_breakdown;
+    if (res.success && breakdown) {
+      const b = breakdown;
       previewEl.innerHTML = `
-        <div class="flex-between mb-1">
-          <span>Gross Subtotal:</span>
-          <span class="font-mono">₹${parseFloat(b.gross_subtotal).toFixed(2)}</span>
-        </div>
-        ${b.discount_amount > 0 ? `
-          <div class="flex-between mb-1 text-success">
-            <span>Discount:</span>
-            <span class="font-mono">-₹${parseFloat(b.discount_amount).toFixed(2)}</span>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+          <div class="flex-between" style="color: var(--text-secondary);">
+            <span>Gross Subtotal:</span>
+            <span class="font-mono fw-bold" style="color: var(--text-primary);">₹${parseFloat(b.gross_subtotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
           </div>
-        ` : ''}
-        <div class="flex-between mb-1">
-          <span>Taxes:</span>
-          <span class="font-mono">+₹${parseFloat(b.tax_amount).toFixed(2)}</span>
-        </div>
-        <div class="flex-between pt-1 border-top fw-bold">
-          <span>Payable Total:</span>
-          <span class="font-mono text-primary fs-6">₹${parseFloat(b.final_total).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+          ${b.discount_amount > 0 ? `
+            <div class="flex-between" style="color: var(--success-600);">
+              <span>Discount Applied (${b.discount_details ? b.discount_details.code : discountCode}):</span>
+              <span class="font-mono fw-bold">-₹${parseFloat(b.discount_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            </div>
+          ` : ''}
+          <div class="flex-between" style="color: var(--text-secondary);">
+            <span>Estimated Taxes (${b.tax_details ? b.tax_details.name : 'GST'}):</span>
+            <span class="font-mono" style="color: var(--text-secondary);">+₹${parseFloat(b.tax_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+          </div>
+          <div class="flex-between" style="font-size: 15px; font-weight: 700; color: var(--primary-700); padding-top: 10px; border-top: 1.5px dashed var(--gray-300); margin-top: 4px;">
+            <span>Payable Total:</span>
+            <span class="font-mono" style="font-size: 17px;">₹${parseFloat(b.final_total).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+          </div>
         </div>
       `;
+    } else {
+      previewEl.innerHTML = `<div style="color: var(--danger-600); font-size: 13px;">⚠️ ${res.message || 'Pricing error'}</div>`;
     }
   },
 
@@ -625,8 +659,15 @@ const Module3 = {
 
     // Resolve customer numeric ID from UUID or ID
     Loading.show();
-    const userRes = await API.get(`/users/${customerSelect.value}`);
-    let customerId = userRes.success && userRes.data.user ? userRes.data.user.id : customerSelect.value;
+    let customerId = customerSelect.value;
+    if (isNaN(Number(customerId))) {
+      const userRes = await API.get(`/users/${customerSelect.value}`);
+      if (userRes.success && userRes.data.user) {
+        customerId = userRes.data.user.id;
+      }
+    } else {
+      customerId = Number(customerId);
+    }
 
     const payload = {
       customer_id: customerId,
@@ -649,6 +690,7 @@ const Module3 = {
     } else {
       Toast.error('Failed', res.message || 'Could not create subscription.');
     }
+    return res;
   },
 
   // ═════════════════════════════════════════════════════════════════════════════
@@ -1116,56 +1158,69 @@ const Module3 = {
       <form id="create-quote-form" onsubmit="event.preventDefault(); Module3.submitCreateQuotation();">
         <div class="grid grid-2 gap-3 mb-3">
           <div class="form-group mb-0">
-            <label class="form-label">Quotation Template (Optional)</label>
+            <label class="form-label" for="quote-template-id">Quotation Template (Optional)</label>
             <select id="quote-template-id" class="form-control" onchange="Module3.onTemplateSelect(this)">
               <option value="">Start from scratch...</option>
               ${templates.map(t => `<option value="${t.id}" ${preselectedTemplateId === t.id ? 'selected' : ''}>${t.name} (${t.plan_name})</option>`).join('')}
             </select>
           </div>
           <div class="form-group mb-0">
-            <label class="form-label">Customer <span class="text-danger">*</span></label>
+            <label class="form-label" for="quote-customer-id">Customer <span class="text-danger">*</span></label>
             <select id="quote-customer-id" class="form-control" required>
               <option value="">Select customer...</option>
-              ${customers.map(c => `<option value="${c.uuid}">${c.name} (${c.email})</option>`).join('')}
+              ${customers.map(c => `<option value="${c.id || c.uuid}">${c.name} (${c.email})</option>`).join('')}
             </select>
           </div>
         </div>
 
         <div class="grid grid-3 gap-3 mb-3">
           <div class="form-group mb-0">
-            <label class="form-label">Subscription Plan <span class="text-danger">*</span></label>
+            <label class="form-label" for="quote-plan-id">Subscription Plan <span class="text-danger">*</span></label>
             <select id="quote-plan-id" class="form-control" required>
               <option value="">Select plan...</option>
               ${plans.map(p => `<option value="${p.id}">${p.name} (${p.billing_frequency})</option>`).join('')}
             </select>
           </div>
           <div class="form-group mb-0">
-            <label class="form-label">Validity (Days)</label>
+            <label class="form-label" for="quote-validity-days">Validity (Days)</label>
             <input type="number" id="quote-validity-days" class="form-control" value="30" min="1">
           </div>
           <div class="form-group mb-0">
-            <label class="form-label">Payment Terms</label>
+            <label class="form-label" for="quote-payment-terms">Payment Terms</label>
             <select id="quote-payment-terms" class="form-control">
-              <option value="Net 30">Net 30</option>
-              <option value="Net 15">Net 15</option>
-              <option value="Net 60">Net 60</option>
-              <option value="Immediate">Immediate</option>
+              <option value="Net 30">Net 30 Days</option>
+              <option value="Net 15">Net 15 Days</option>
+              <option value="Net 60">Net 60 Days</option>
+              <option value="Immediate">Immediate / Due Upon Receipt</option>
             </select>
           </div>
         </div>
 
-        <div class="border rounded p-3 mb-3 bg-white">
-          <div class="flex-between mb-2">
-            <strong class="text-sm">Quotation Product Lines</strong>
+        <!-- Quotation Product Lines Card -->
+        <div class="sub-lines-card">
+          <div class="sub-lines-card-header">
+            <div>
+              <strong style="font-size: 13.5px; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                <span class="material-icons-round" style="font-size: 18px; color: var(--primary-600);">request_quote</span>
+                Quotation Product Lines
+              </strong>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Preload from template or configure custom items</div>
+            </div>
             <button type="button" class="btn btn-sm btn-outline" onclick="Module3.addSubLineRow()">
-              <span class="material-icons-round">add</span> Add Line
+              <span class="material-icons-round" style="font-size: 16px;">add</span> Add Line Item
             </button>
+          </div>
+          <div class="sub-line-col-headers">
+            <div>Product</div>
+            <div>Variant / Surcharge</div>
+            <div style="text-align: center;">Qty</div>
+            <div></div>
           </div>
           <div id="sub-lines-container"></div>
         </div>
 
         <div class="form-group mb-0">
-          <label class="form-label">Discount Coupon Code</label>
+          <label class="form-label" for="quote-discount-code">Discount Coupon Code</label>
           <input type="text" id="quote-discount-code" class="form-control text-uppercase" placeholder="e.g. BRIGHT20">
         </div>
       </form>
@@ -1276,8 +1331,15 @@ const Module3 = {
     }
 
     Loading.show();
-    const userRes = await API.get(`/users/${customerSelect.value}`);
-    let customerId = userRes.success && userRes.data.user ? userRes.data.user.id : customerSelect.value;
+    let customerId = customerSelect.value;
+    if (isNaN(Number(customerId))) {
+      const userRes = await API.get(`/users/${customerSelect.value}`);
+      if (userRes.success && userRes.data.user) {
+        customerId = userRes.data.user.id;
+      }
+    } else {
+      customerId = Number(customerId);
+    }
 
     const payload = {
       customer_id: customerId,
@@ -1315,41 +1377,54 @@ const Module3 = {
 
     const bodyHtml = `
       <form id="create-template-form" onsubmit="event.preventDefault(); Module3.submitCreateTemplate();">
-        <div class="form-group mb-2">
-          <label class="form-label">Template Name <span class="text-danger">*</span></label>
+        <div class="form-group mb-3">
+          <label class="form-label" for="tpl-name">Template Name <span class="text-danger">*</span></label>
           <input type="text" id="tpl-name" class="form-control" placeholder="e.g. Enterprise Starter Pack" required>
         </div>
-        <div class="form-group mb-2">
-          <label class="form-label">Description</label>
+        <div class="form-group mb-3">
+          <label class="form-label" for="tpl-desc">Description</label>
           <input type="text" id="tpl-desc" class="form-control" placeholder="Short description of this package">
         </div>
-        <div class="grid grid-3 gap-2 mb-3">
+        <div class="grid grid-3 gap-3 mb-3">
           <div class="form-group mb-0">
-            <label class="form-label">Default Plan <span class="text-danger">*</span></label>
+            <label class="form-label" for="tpl-plan-id">Default Plan <span class="text-danger">*</span></label>
             <select id="tpl-plan-id" class="form-control" required>
               ${plans.map(p => `<option value="${p.id}">${p.name} (${p.billing_frequency})</option>`).join('')}
             </select>
           </div>
           <div class="form-group mb-0">
-            <label class="form-label">Validity (Days)</label>
+            <label class="form-label" for="tpl-validity">Validity (Days)</label>
             <input type="number" id="tpl-validity" class="form-control" value="30" min="1">
           </div>
           <div class="form-group mb-0">
-            <label class="form-label">Payment Terms</label>
+            <label class="form-label" for="tpl-terms">Payment Terms</label>
             <select id="tpl-terms" class="form-control">
-              <option value="Net 30">Net 30</option>
-              <option value="Net 15">Net 15</option>
-              <option value="Net 60">Net 60</option>
+              <option value="Net 30">Net 30 Days</option>
+              <option value="Net 15">Net 15 Days</option>
+              <option value="Net 60">Net 60 Days</option>
             </select>
           </div>
         </div>
 
-        <div class="border rounded p-3 mb-2 bg-white">
-          <div class="flex-between mb-2">
-            <strong class="text-sm">Predefined Products & Quantities</strong>
+        <!-- Predefined Line Items Card -->
+        <div class="sub-lines-card">
+          <div class="sub-lines-card-header">
+            <div>
+              <strong style="font-size: 13.5px; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                <span class="material-icons-round" style="font-size: 18px; color: var(--primary-600);">view_quilt</span>
+                Predefined Products & Quantities
+              </strong>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Items will automatically populate whenever this template is selected</div>
+            </div>
             <button type="button" class="btn btn-sm btn-outline" onclick="Module3.addSubLineRow()">
-              <span class="material-icons-round">add</span> Add Line
+              <span class="material-icons-round" style="font-size: 16px;">add</span> Add Line
             </button>
+          </div>
+          <div class="sub-line-col-headers">
+            <div>Product</div>
+            <div>Variant / Surcharge</div>
+            <div style="text-align: center;">Qty</div>
+            <div></div>
           </div>
           <div id="sub-lines-container"></div>
         </div>
@@ -1417,3 +1492,5 @@ const Module3 = {
     }
   }
 };
+
+window.Module3 = Module3;

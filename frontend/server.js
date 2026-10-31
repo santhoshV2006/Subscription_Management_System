@@ -34,6 +34,13 @@ const server = http.createServer((req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   let pathname = parsedUrl.pathname;
 
+  // Normalize any nested relative asset requests (e.g. /dashboard/admin/js/... -> /js/...)
+  if (pathname.includes('/js/')) {
+    pathname = pathname.substring(pathname.indexOf('/js/'));
+  } else if (pathname.includes('/css/')) {
+    pathname = pathname.substring(pathname.indexOf('/css/'));
+  }
+
   // Normalize path and prevent directory traversal
   let safePath = path.normalize(pathname).replace(/^(\.\.[\/\\])+/, '');
   if (safePath === '/' || safePath === '') safePath = '/index.html';
@@ -51,6 +58,12 @@ const server = http.createServer((req, res) => {
       });
       fs.createReadStream(filePath).pipe(res);
     } else {
+      // If it's a specific asset with an extension that does not exist, return 404
+      if (path.extname(pathname)) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        return res.end('404 File Not Found');
+      }
+
       // SPA Fallback: Serve index.html for client-side routing
       const indexPath = path.join(PUBLIC_DIR, 'index.html');
       fs.readFile(indexPath, (readErr, content) => {

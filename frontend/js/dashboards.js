@@ -97,16 +97,25 @@ const Dashboards = {
     const items = {
       admin: [
         { id: 'dashboard', path: '/dashboard/admin', icon: 'dashboard', label: 'Dashboard' },
+        { id: 'products', path: '/dashboard/admin/products', icon: 'inventory_2', label: 'Products & Variants' },
+        { id: 'plans', path: '/dashboard/admin/plans', icon: 'subscriptions', label: 'Subscription Plans' },
+        { id: 'taxes', path: '/dashboard/admin/taxes', icon: 'receipt_long', label: 'Tax Rules' },
+        { id: 'discounts', path: '/dashboard/admin/discounts', icon: 'local_offer', label: 'Discounts & Vouchers' },
+        { id: 'pricing-calculator', path: '/dashboard/admin/pricing-calculator', icon: 'calculate', label: 'Pricing Simulator' },
         { id: 'users', path: '/dashboard/admin/users', icon: 'group', label: 'User Management' },
         { id: 'staff', path: '/dashboard/admin/staff', icon: 'badge', label: 'Create Staff' },
         { id: 'profile', path: '/dashboard/admin/profile', icon: 'person', label: 'My Profile' },
       ],
       staff: [
         { id: 'dashboard', path: '/dashboard/staff', icon: 'dashboard', label: 'Dashboard' },
+        { id: 'products', path: '/dashboard/admin/products', icon: 'inventory_2', label: 'Products' },
+        { id: 'plans', path: '/dashboard/admin/plans', icon: 'subscriptions', label: 'Plans' },
+        { id: 'pricing-calculator', path: '/dashboard/admin/pricing-calculator', icon: 'calculate', label: 'Pricing Calculator' },
         { id: 'profile', path: '/dashboard/staff/profile', icon: 'person', label: 'My Profile' },
       ],
       customer: [
         { id: 'dashboard', path: '/dashboard/customer', icon: 'dashboard', label: 'Dashboard' },
+        { id: 'pricing-calculator', path: '/dashboard/admin/pricing-calculator', icon: 'calculate', label: 'Price Estimator' },
         { id: 'profile', path: '/dashboard/customer/profile', icon: 'person', label: 'My Profile' },
       ]
     };
@@ -116,6 +125,11 @@ const Dashboards = {
   getPageTitle(activePage) {
     const titles = {
       dashboard: 'Dashboard',
+      products: 'Product & Variant Management',
+      plans: 'Subscription Plan Management',
+      taxes: 'Tax Rule Management',
+      discounts: 'Discount & Voucher Management',
+      'pricing-calculator': 'Live Pricing & Quotation Simulator',
       users: 'User Management',
       staff: 'Create Staff Account',
       profile: 'My Profile'

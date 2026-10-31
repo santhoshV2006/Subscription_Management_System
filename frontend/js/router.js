@@ -20,6 +20,11 @@ const Router = {
 
       // Admin routes
       '/dashboard/admin': { page: 'adminDashboard', auth: true, roles: ['admin'] },
+      '/dashboard/admin/products': { page: 'adminProducts', auth: true, roles: ['admin', 'staff'] },
+      '/dashboard/admin/plans': { page: 'adminPlans', auth: true, roles: ['admin', 'staff'] },
+      '/dashboard/admin/taxes': { page: 'adminTaxes', auth: true, roles: ['admin'] },
+      '/dashboard/admin/discounts': { page: 'adminDiscounts', auth: true, roles: ['admin'] },
+      '/dashboard/admin/pricing-calculator': { page: 'pricingCalculator', auth: true, roles: ['admin', 'staff', 'customer'] },
       '/dashboard/admin/users': { page: 'adminUsers', auth: true, roles: ['admin'] },
       '/dashboard/admin/staff': { page: 'createStaff', auth: true, roles: ['admin'] },
       '/dashboard/admin/profile': { page: 'profilePage', auth: true, roles: ['admin'] },
@@ -135,6 +140,21 @@ const Router = {
           break;
         case 'adminDashboard':
           html = await Dashboards.adminDashboard();
+          break;
+        case 'adminProducts':
+          html = await Module2.productsPage(this.queryParams);
+          break;
+        case 'adminPlans':
+          html = await Module2.plansPage(this.queryParams);
+          break;
+        case 'adminTaxes':
+          html = await Module2.taxesPage();
+          break;
+        case 'adminDiscounts':
+          html = await Module2.discountsPage(this.queryParams);
+          break;
+        case 'pricingCalculator':
+          html = await Module2.pricingCalculatorPage();
           break;
         case 'adminUsers':
           html = await Dashboards.adminUsers(this.queryParams);

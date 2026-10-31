@@ -22,6 +22,7 @@ const Router = {
       '/dashboard/admin': { page: 'adminDashboard', auth: true, roles: ['admin'] },
       '/dashboard/admin/subscriptions': { page: 'adminSubscriptions', auth: true, roles: ['admin', 'staff'] },
       '/dashboard/admin/quotations': { page: 'adminQuotations', auth: true, roles: ['admin', 'staff'] },
+      '/dashboard/admin/invoices': { page: 'adminInvoices', auth: true, roles: ['admin', 'staff'] },
       '/dashboard/admin/products': { page: 'adminProducts', auth: true, roles: ['admin', 'staff'] },
       '/dashboard/admin/plans': { page: 'adminPlans', auth: true, roles: ['admin', 'staff'] },
       '/dashboard/admin/taxes': { page: 'adminTaxes', auth: true, roles: ['admin'] },
@@ -35,12 +36,14 @@ const Router = {
       '/dashboard/staff': { page: 'staffDashboard', auth: true, roles: ['staff'] },
       '/dashboard/staff/subscriptions': { page: 'adminSubscriptions', auth: true, roles: ['staff'] },
       '/dashboard/staff/quotations': { page: 'adminQuotations', auth: true, roles: ['staff'] },
+      '/dashboard/staff/invoices': { page: 'adminInvoices', auth: true, roles: ['staff'] },
       '/dashboard/staff/profile': { page: 'profilePage', auth: true, roles: ['staff'] },
 
       // Customer routes
       '/dashboard/customer': { page: 'customerDashboard', auth: true, roles: ['customer'] },
       '/dashboard/customer/subscriptions': { page: 'customerSubscriptions', auth: true, roles: ['customer'] },
       '/dashboard/customer/quotations': { page: 'customerQuotations', auth: true, roles: ['customer'] },
+      '/dashboard/customer/invoices': { page: 'customerInvoices', auth: true, roles: ['customer'] },
       '/dashboard/customer/profile': { page: 'profilePage', auth: true, roles: ['customer'] },
     };
 
@@ -157,11 +160,17 @@ const Router = {
         case 'adminQuotations':
           html = await Module3.quotationsPage(this.queryParams);
           break;
+        case 'adminInvoices':
+          html = await Module4.invoicesPage(this.queryParams);
+          break;
         case 'customerSubscriptions':
           html = await Module3.subscriptionsPage(this.queryParams);
           break;
         case 'customerQuotations':
           html = await Module3.quotationsPage(this.queryParams);
+          break;
+        case 'customerInvoices':
+          html = await Module4.invoicesPage(this.queryParams);
           break;
         case 'adminProducts':
           html = await Module2.productsPage(this.queryParams);

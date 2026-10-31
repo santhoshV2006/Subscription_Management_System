@@ -824,6 +824,7 @@ const Module3 = {
       body: bodyHtml,
       width: '720px',
       buttons: [
+        { label: 'Generate Invoice Now', class: 'btn-primary', onclick: `Modal.close(); Module4.openGenerateModal(${payload.subscription_id});` },
         { label: 'Copy JSON', class: 'btn-outline', onclick: `navigator.clipboard.writeText(\`${jsonStr.replace(/`/g, '\\`')}\`); Toast.success('Copied', 'Payload copied to clipboard!');` },
         { label: 'Close', class: 'btn-secondary', onclick: 'Modal.close()' }
       ]

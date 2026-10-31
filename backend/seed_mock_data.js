@@ -1,7 +1,8 @@
 /**
  * Brightloop Software — Comprehensive Mock Data Seeder
  * Populates realistic data across Module 1 (Users & Roles), Module 2 (Catalog & Pricing),
- * and Module 3 (Subscriptions, Quotations, Templates, Lines, and Lifecycle History).
+ * Module 3 (Subscriptions, Quotations, Templates, Lines, and Lifecycle History),
+ * and Module 4 (Invoices, Invoice Lines, and Audit History).
  *
  * Run with: node backend/seed_mock_data.js
  */
@@ -13,7 +14,11 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { db, initializeDatabase } = require('./config/database');
-const { calculateSubscriptionDetails, recordSubscriptionHistory } = require('./utils/subscriptionEngine');
+const {
+  calculateSubscriptionDetails,
+  recordSubscriptionHistory,
+  recordInvoiceHistory
+} = require('./utils/subscriptionEngine');
 
 async function seedAllMockData() {
   console.log('\n🚀 ═══════════════════════════════════════════════════════════════');
@@ -24,6 +29,9 @@ async function seedAllMockData() {
     initializeDatabase();
 
     db.pragma('foreign_keys = OFF');
+    db.prepare('DELETE FROM invoice_history').run();
+    db.prepare('DELETE FROM invoice_lines').run();
+    db.prepare('DELETE FROM invoices').run();
     db.prepare('DELETE FROM subscription_history').run();
     db.prepare('DELETE FROM subscription_lines').run();
     db.prepare('DELETE FROM subscriptions').run();
@@ -35,6 +43,7 @@ async function seedAllMockData() {
     db.prepare('DELETE FROM discounts').run();
     db.prepare('DELETE FROM product_variants').run();
     db.prepare('DELETE FROM products').run();
+    db.prepare('DELETE FROM subscription_plans').run();
     db.prepare('DELETE FROM taxes').run();
     db.prepare('DELETE FROM refresh_tokens').run();
     db.prepare('DELETE FROM activity_logs').run();
@@ -84,7 +93,6 @@ async function seedAllMockData() {
     console.log('📦 Seeding Module 2: Catalog, Pricing & Taxes...');
 
     // Taxes
-    db.prepare('DELETE FROM taxes').run();
     const insertTax = db.prepare(`
       INSERT INTO taxes (id, uuid, name, code, rate, tax_type, description, is_compound, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
@@ -94,9 +102,6 @@ async function seedAllMockData() {
     insertTax.run(3, uuidv4(), 'Zero Tax / SEZ 0%', 'ZERO0', 0.0, 'percentage', 'Zero-rated supply for exports and SEZ units', 0);
 
     // Products
-    db.prepare('DELETE FROM products').run();
-    db.prepare('DELETE FROM product_variants').run();
-
     const insertProd = db.prepare(`
       INSERT INTO products (id, uuid, name, product_type, sales_price, cost_price, notes, tax_id, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
@@ -113,28 +118,23 @@ async function seedAllMockData() {
       INSERT INTO product_variants (id, uuid, product_id, attribute_name, variant_name, sku, additional_price, cost_price_extra, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
     `);
-    // Variants for Cloud ERP Suite
     insertVariant.run(1, uuidv4(), 1, 'Brand', 'Standard Community Edition', 'ERP-STD', 0.0, 0.0);
     insertVariant.run(2, uuidv4(), 1, 'Brand', 'Odoo Edition', 'ERP-ODOO-560', 560.0, 200.0);
     insertVariant.run(3, uuidv4(), 1, 'Brand', 'SAP Connected Suite', 'ERP-SAP-PLUS', 1200.0, 400.0);
 
-    // Variants for Analytics Pro
     insertVariant.run(4, uuidv4(), 2, 'Tier', 'Silver Tier (5GB)', 'BI-SILVER', 0.0, 0.0);
     insertVariant.run(5, uuidv4(), 2, 'Tier', 'Gold Tier (50GB)', 'BI-GOLD', 450.0, 150.0);
     insertVariant.run(6, uuidv4(), 2, 'Tier', 'Platinum Dedicated Engine', 'BI-PLATINUM', 900.0, 300.0);
 
-    // Variants for Secure Guard
     insertVariant.run(7, uuidv4(), 3, 'Pack', 'Single Endpoint License', 'SEC-1', 0.0, 0.0);
     insertVariant.run(8, uuidv4(), 3, 'Pack', 'Multi-Device 5 Endpoint Bundle', 'SEC-5', 600.0, 200.0);
 
-    // Variants for CRM
     insertVariant.run(9, uuidv4(), 4, 'Engine', 'Standard Desk', 'CRM-BASE', 0.0, 0.0);
     insertVariant.run(10, uuidv4(), 4, 'Engine', 'AI Agent Co-Pilot Edition', 'CRM-AI', 350.0, 120.0);
 
     console.log('   ✓ Seeded 4 Products and 10 Variants (including Odoo Brand +₹560)');
 
     // Subscription Plans
-    db.prepare('DELETE FROM subscription_plans').run();
     const insertPlan = db.prepare(`
       INSERT INTO subscription_plans (
         id, uuid, product_id, name, code, description, billing_frequency,
@@ -153,8 +153,6 @@ async function seedAllMockData() {
     console.log('   ✓ Seeded 6 Subscription Plans (Daily, Weekly, Monthly, Yearly, Team Multi-seat, Legacy Expired)');
 
     // Discounts
-    db.prepare('DELETE FROM discounts').run();
-    db.prepare('DELETE FROM discount_usages').run();
     const insertDiscount = db.prepare(`
       INSERT INTO discounts (
         id, uuid, name, code, discount_type, value, min_purchase_amount,
@@ -178,9 +176,6 @@ async function seedAllMockData() {
     // ─────────────────────────────────────────────────────────────────────────
     console.log('📋 Seeding Module 3: Quotation Templates...');
 
-    db.prepare('DELETE FROM quotation_template_lines').run();
-    db.prepare('DELETE FROM quotation_templates').run();
-
     const insertTemplate = db.prepare(`
       INSERT INTO quotation_templates (id, uuid, name, description, plan_id, default_validity_days, payment_terms, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, 1)
@@ -190,17 +185,14 @@ async function seedAllMockData() {
       VALUES (?, ?, ?, ?, ?)
     `);
 
-    // Template 1: Starter Pack
     insertTemplate.run(1, uuidv4(), 'Enterprise Starter Pack', 'Essential bundle for mid-sized teams: ERP with Odoo brand plus endpoint security', 3, 30, 'Net 30');
     insertTemplateLine.run(1, 1, 2, 2, 0); // 2 units of Cloud ERP (Odoo Edition)
     insertTemplateLine.run(1, 3, 8, 1, 1); // 1 unit of Secure Guard (5-device pack)
 
-    // Template 2: Analytics & ERP Annual Cloud
     insertTemplate.run(2, uuidv4(), 'Annual Business Intelligence Bundle', 'High-performance reporting engine and ERP for data-driven companies', 4, 45, 'Net 60');
     insertTemplateLine.run(2, 1, 3, 5, 0); // 5 units of Cloud ERP (SAP Connected)
     insertTemplateLine.run(2, 2, 6, 2, 1); // 2 units of Analytics Pro (Platinum)
 
-    // Template 3: SME Omnichannel Fast-Track
     insertTemplate.run(3, uuidv4(), 'SME Omnichannel Fast-Track', 'Customer engagement stack with AI co-pilot', 3, 15, 'Net 15');
     insertTemplateLine.run(3, 4, 10, 3, 0); // 3 units of CRM (AI Co-pilot)
 
@@ -210,9 +202,6 @@ async function seedAllMockData() {
     // 4. QUOTATIONS (Module 3)
     // ─────────────────────────────────────────────────────────────────────────
     console.log('📄 Seeding Module 3: Quotations...');
-
-    db.prepare('DELETE FROM quotation_lines').run();
-    db.prepare('DELETE FROM quotations').run();
 
     const insertQuote = db.prepare(`
       INSERT INTO quotations (
@@ -235,34 +224,20 @@ async function seedAllMockData() {
     const q1Calc = calculateSubscriptionDetails({
       plan_id: 3,
       lines: [
-        { product_id: 1, variant_id: 2, quantity: 2 }, // Odoo (+560) -> 2960 * 2 = 5920
-        { product_id: 3, variant_id: 8, quantity: 1 }  // Secure Guard (+600) -> 1350 * 1 = 1350
+        { product_id: 1, variant_id: 2, quantity: 2 },
+        { product_id: 3, variant_id: 8, quantity: 1 }
       ],
       discount_code: 'BRIGHT20',
       start_date: '2026-10-15'
     });
 
     insertQuote.run(
-      1,
-      uuidv4(),
-      'QT-2026-00001',
-      1,
-      5, // Acme Corp
-      3,
-      'Sent',
-      30,
-      '2026-10-15',
-      '2026-11-14',
-      'Net 30',
-      q1Calc.subtotal,
-      q1Calc.discount_id,
-      q1Calc.discount_code,
-      q1Calc.discount_amount,
-      q1Calc.tax_amount,
-      q1Calc.total_amount,
+      1, uuidv4(), 'QT-2026-00001', 1, 5, 3,
+      'Sent', 30, '2026-10-15', '2026-11-14', 'Net 30',
+      q1Calc.subtotal, q1Calc.discount_id, q1Calc.discount_code, q1Calc.discount_amount,
+      q1Calc.tax_amount, q1Calc.total_amount,
       'Quotation delivered to Acme procurement team for evaluation.',
-      null,
-      2 // Rahul Staff
+      null, 2
     );
     for (const l of q1Calc.lines) {
       insertQuoteLine.run(1, l.product_id, l.variant_id, l.product_name, l.variant_name, l.quantity, l.base_unit_price, l.variant_additional_price, l.unit_price, l.gross_amount, l.tax_id, l.tax_rate, l.tax_amount, l.line_total);
@@ -272,34 +247,20 @@ async function seedAllMockData() {
     const q2Calc = calculateSubscriptionDetails({
       plan_id: 4,
       lines: [
-        { product_id: 1, variant_id: 3, quantity: 3 }, // 3 units ERP SAP Plus
-        { product_id: 2, variant_id: 6, quantity: 2 }  // 2 units BI Platinum
+        { product_id: 1, variant_id: 3, quantity: 3 },
+        { product_id: 2, variant_id: 6, quantity: 2 }
       ],
       discount_code: null,
       start_date: '2026-10-20'
     });
 
     insertQuote.run(
-      2,
-      uuidv4(),
-      'QT-2026-00002',
-      2,
-      6, // Nexus Tech
-      4,
-      'Accepted',
-      45,
-      '2026-10-20',
-      '2026-12-04',
-      'Net 60',
-      q2Calc.subtotal,
-      q2Calc.discount_id,
-      q2Calc.discount_code,
-      q2Calc.discount_amount,
-      q2Calc.tax_amount,
-      q2Calc.total_amount,
+      2, uuidv4(), 'QT-2026-00002', 2, 6, 4,
+      'Accepted', 45, '2026-10-20', '2026-12-04', 'Net 60',
+      q2Calc.subtotal, q2Calc.discount_id, q2Calc.discount_code, q2Calc.discount_amount,
+      q2Calc.tax_amount, q2Calc.total_amount,
       'Quotation accepted by Nexus CIO. Pending contract activation.',
-      null,
-      3 // Vikram Staff
+      null, 3
     );
     for (const l of q2Calc.lines) {
       insertQuoteLine.run(2, l.product_id, l.variant_id, l.product_name, l.variant_name, l.quantity, l.base_unit_price, l.variant_additional_price, l.unit_price, l.gross_amount, l.tax_id, l.tax_rate, l.tax_amount, l.line_total);
@@ -316,26 +277,12 @@ async function seedAllMockData() {
     });
 
     insertQuote.run(
-      3,
-      uuidv4(),
-      'QT-2026-00003',
-      null,
-      8, // Demo Customer
-      3,
-      'Converted',
-      30,
-      '2026-10-01',
-      '2026-10-31',
-      'Net 30',
-      q3Calc.subtotal,
-      q3Calc.discount_id,
-      q3Calc.discount_code,
-      q3Calc.discount_amount,
-      q3Calc.tax_amount,
-      q3Calc.total_amount,
+      3, uuidv4(), 'QT-2026-00003', null, 8, 3,
+      'Converted', 30, '2026-10-01', '2026-10-31', 'Net 30',
+      q3Calc.subtotal, q3Calc.discount_id, q3Calc.discount_code, q3Calc.discount_amount,
+      q3Calc.tax_amount, q3Calc.total_amount,
       'Successfully converted into active subscription SUB-2026-00001.',
-      1, // Linked to Subscription 1
-      1 // Admin
+      1, 1
     );
     for (const l of q3Calc.lines) {
       insertQuoteLine.run(3, l.product_id, l.variant_id, l.product_name, l.variant_name, l.quantity, l.base_unit_price, l.variant_additional_price, l.unit_price, l.gross_amount, l.tax_id, l.tax_rate, l.tax_amount, l.line_total);
@@ -347,10 +294,6 @@ async function seedAllMockData() {
     // 5. SUBSCRIPTIONS & LIFECYCLE (Module 3)
     // ─────────────────────────────────────────────────────────────────────────
     console.log('🔄 Seeding Module 3: Subscriptions and Lifecycle History...');
-
-    db.prepare('DELETE FROM subscription_history').run();
-    db.prepare('DELETE FROM subscription_lines').run();
-    db.prepare('DELETE FROM subscriptions').run();
 
     const insertSub = db.prepare(`
       INSERT INTO subscriptions (
@@ -370,27 +313,13 @@ async function seedAllMockData() {
     `);
 
     // Sub 1: Active (Converted from QT-2026-00003 for Demo Customer)
-    // Product: Cloud ERP Suite + Odoo brand (+₹560)
     insertSub.run(
-      1,
-      uuidv4(),
-      'SUB-2026-00001',
-      8, // Demo Customer
-      3, // Monthly Pro
-      'Active',
-      '2026-10-01',
-      '2026-11-01',
-      'Net 30',
-      q3Calc.subtotal,
-      q3Calc.discount_id,
-      q3Calc.discount_code,
-      q3Calc.discount_amount,
-      q3Calc.tax_amount,
-      q3Calc.total_amount,
+      1, uuidv4(), 'SUB-2026-00001', 8, 3,
+      'Active', '2026-10-01', '2026-11-01', 'Net 30',
+      q3Calc.subtotal, q3Calc.discount_id, q3Calc.discount_code, q3Calc.discount_amount,
+      q3Calc.tax_amount, q3Calc.total_amount,
       'Primary ERP production instance with Odoo Brand configuration.',
-      3,
-      null, null, null,
-      1
+      3, null, null, null, 1
     );
     let lineId = 1;
     for (const l of q3Calc.lines) {
@@ -403,36 +332,23 @@ async function seedAllMockData() {
 
     // Sub 2: Active Annual Enterprise (Acme Industrial Corp)
     const s2Calc = calculateSubscriptionDetails({
-      plan_id: 4, // Annual
+      plan_id: 4,
       lines: [
-        { product_id: 1, variant_id: 3, quantity: 4 }, // 4 seats ERP SAP (+1200)
-        { product_id: 2, variant_id: 5, quantity: 2 }, // 2 seats Analytics Gold (+450)
-        { product_id: 3, variant_id: 8, quantity: 2 }  // 2 packs Security (+600)
+        { product_id: 1, variant_id: 3, quantity: 4 },
+        { product_id: 2, variant_id: 5, quantity: 2 },
+        { product_id: 3, variant_id: 8, quantity: 2 }
       ],
       discount_code: 'ANNUALBOOST',
       start_date: '2026-09-01'
     });
 
     insertSub.run(
-      2,
-      uuidv4(),
-      'SUB-2026-00002',
-      5, // Acme Corp
-      4, // Annual Plan
-      'Active',
-      '2026-09-01',
-      '2027-09-01',
-      'Net 60',
-      s2Calc.subtotal,
-      s2Calc.discount_id,
-      s2Calc.discount_code,
-      s2Calc.discount_amount,
-      s2Calc.tax_amount,
-      s2Calc.total_amount,
+      2, uuidv4(), 'SUB-2026-00002', 5, 4,
+      'Active', '2026-09-01', '2027-09-01', 'Net 60',
+      s2Calc.subtotal, s2Calc.discount_id, s2Calc.discount_code, s2Calc.discount_amount,
+      s2Calc.tax_amount, s2Calc.total_amount,
       'Annual enterprise cluster for manufacturing operations.',
-      null,
-      null, null, null,
-      2
+      null, null, null, null, 2
     );
     for (const l of s2Calc.lines) {
       insertSubLine.run(lineId++, uuidv4(), 2, l.product_id, l.variant_id, l.product_name, l.variant_name, l.quantity, l.base_unit_price, l.variant_additional_price, l.unit_price, l.gross_amount, l.tax_id, l.tax_rate, l.tax_amount, l.line_total);
@@ -443,33 +359,20 @@ async function seedAllMockData() {
     const s3Calc = calculateSubscriptionDetails({
       plan_id: 3,
       lines: [
-        { product_id: 2, variant_id: 6, quantity: 1 }, // Analytics Platinum (+900)
-        { product_id: 4, variant_id: 10, quantity: 2 }  // CRM AI (+350)
+        { product_id: 2, variant_id: 6, quantity: 1 },
+        { product_id: 4, variant_id: 10, quantity: 2 }
       ],
       discount_code: null,
       start_date: '2026-08-15'
     });
 
     insertSub.run(
-      3,
-      uuidv4(),
-      'SUB-2026-00003',
-      6, // Nexus Tech
-      3,
-      'Paused',
-      '2026-08-15',
-      '2026-11-15',
-      'Net 30',
-      s3Calc.subtotal,
-      s3Calc.discount_id,
-      s3Calc.discount_code,
-      s3Calc.discount_amount,
-      s3Calc.tax_amount,
-      s3Calc.total_amount,
+      3, uuidv4(), 'SUB-2026-00003', 6, 3,
+      'Paused', '2026-08-15', '2026-11-15', 'Net 30',
+      s3Calc.subtotal, s3Calc.discount_id, s3Calc.discount_code, s3Calc.discount_amount,
+      s3Calc.tax_amount, s3Calc.total_amount,
       'Temporary maintenance pause requested during cloud server migration.',
-      null,
-      null, null, '2026-10-25 14:00:00',
-      3
+      null, null, null, '2026-10-25 14:00:00', 3
     );
     for (const l of s3Calc.lines) {
       insertSubLine.run(lineId++, uuidv4(), 3, l.product_id, l.variant_id, l.product_name, l.variant_name, l.quantity, l.base_unit_price, l.variant_additional_price, l.unit_price, l.gross_amount, l.tax_id, l.tax_rate, l.tax_amount, l.line_total);
@@ -481,32 +384,19 @@ async function seedAllMockData() {
     const s4Calc = calculateSubscriptionDetails({
       plan_id: 3,
       lines: [
-        { product_id: 4, variant_id: 9, quantity: 1 } // CRM Base
+        { product_id: 4, variant_id: 9, quantity: 1 }
       ],
       discount_code: null,
       start_date: '2026-06-01'
     });
 
     insertSub.run(
-      4,
-      uuidv4(),
-      'SUB-2026-00004',
-      7, // Zenith Retail
-      3,
-      'Closed',
-      '2026-06-01',
-      '2026-07-01',
-      'Net 15',
-      s4Calc.subtotal,
-      s4Calc.discount_id,
-      s4Calc.discount_code,
-      s4Calc.discount_amount,
-      s4Calc.tax_amount,
-      s4Calc.total_amount,
+      4, uuidv4(), 'SUB-2026-00004', 7, 3,
+      'Closed', '2026-06-01', '2026-07-01', 'Net 15',
+      s4Calc.subtotal, s4Calc.discount_id, s4Calc.discount_code, s4Calc.discount_amount,
+      s4Calc.tax_amount, s4Calc.total_amount,
       'Project completed successfully. Early closure requested.',
-      null,
-      '2026-06-28 10:30:00', 'Early closure requested after pilot completion', null,
-      2
+      null, '2026-06-28 10:30:00', 'Early closure requested after pilot completion', null, 2
     );
     for (const l of s4Calc.lines) {
       insertSubLine.run(lineId++, uuidv4(), 4, l.product_id, l.variant_id, l.product_name, l.variant_name, l.quantity, l.base_unit_price, l.variant_additional_price, l.unit_price, l.gross_amount, l.tax_id, l.tax_rate, l.tax_amount, l.line_total);
@@ -516,34 +406,21 @@ async function seedAllMockData() {
 
     // Sub 5: Confirmed (Demo Customer)
     const s5Calc = calculateSubscriptionDetails({
-      plan_id: 5, // Team plan (min 3 seats)
+      plan_id: 5,
       lines: [
-        { product_id: 1, variant_id: 2, quantity: 3 } // 3 seats of ERP Odoo (+560)
+        { product_id: 1, variant_id: 2, quantity: 3 }
       ],
       discount_code: 'ERPSPECIAL',
       start_date: '2026-11-01'
     });
 
     insertSub.run(
-      5,
-      uuidv4(),
-      'SUB-2026-00005',
-      8, // Demo Customer
-      5, // Team plan
-      'Confirmed',
-      '2026-11-01',
-      '2026-12-01',
-      'Net 30',
-      s5Calc.subtotal,
-      s5Calc.discount_id,
-      s5Calc.discount_code,
-      s5Calc.discount_amount,
-      s5Calc.tax_amount,
-      s5Calc.total_amount,
+      5, uuidv4(), 'SUB-2026-00005', 8, 5,
+      'Confirmed', '2026-11-01', '2026-12-01', 'Net 30',
+      s5Calc.subtotal, s5Calc.discount_id, s5Calc.discount_code, s5Calc.discount_amount,
+      s5Calc.tax_amount, s5Calc.total_amount,
       'Team multi-seat rollout starting in November.',
-      null,
-      null, null, null,
-      1
+      null, null, null, null, 1
     );
     for (const l of s5Calc.lines) {
       insertSubLine.run(lineId++, uuidv4(), 5, l.product_id, l.variant_id, l.product_name, l.variant_name, l.quantity, l.base_unit_price, l.variant_additional_price, l.unit_price, l.gross_amount, l.tax_id, l.tax_rate, l.tax_amount, l.line_total);
@@ -553,6 +430,133 @@ async function seedAllMockData() {
 
     console.log('   ✓ Seeded 5 Subscriptions across Active, Paused, Closed & Confirmed states with audit history');
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // 6. INVOICES & BILLING (Module 4)
+    // ─────────────────────────────────────────────────────────────────────────
+    console.log('🧾 Seeding Module 4: Invoices, Lines & Audit History...');
+
+    const insertInvoice = db.prepare(`
+      INSERT INTO invoices (
+        id, uuid, invoice_number, subscription_id, customer_id, customer_name, customer_email,
+        subscription_number, plan_id, plan_name, billing_frequency,
+        invoice_date, due_date, billing_period_start, billing_period_end,
+        payment_terms, currency, subtotal, discount_id, discount_code, discount_amount,
+        taxable_amount, tax_amount, total_amount, amount_paid, status, notes,
+        payment_method, payment_reference, confirmed_at, paid_at, cancelled_at, cancellation_reason,
+        created_by
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?
+      )
+    `);
+
+    const insertInvLine = db.prepare(`
+      INSERT INTO invoice_lines (
+        id, uuid, invoice_id, product_id, variant_id, product_name, product_type, variant_name,
+        quantity, base_unit_price, variant_additional_price, unit_price,
+        gross_amount, tax_id, tax_code, tax_rate, tax_amount, line_total
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let invLineId = 1;
+
+    // Invoice 1: Paid (SUB-2026-00001, Demo Customer, Oct billing)
+    insertInvoice.run(
+      1, uuidv4(), 'INV-2026-00001', 1, 8, 'Demo Customer', 'customer@brightloop.com',
+      'SUB-2026-00001', 3, 'Monthly Professional SaaS', 'monthly',
+      '2026-10-01', '2026-10-31', '2026-10-01', '2026-11-01',
+      'Net 30', 'INR', q3Calc.subtotal, q3Calc.discount_id, q3Calc.discount_code, q3Calc.discount_amount,
+      q3Calc.taxable_amount, q3Calc.tax_amount, q3Calc.total_amount, q3Calc.total_amount,
+      'Paid', 'Recurring billing cycle for October 2026.',
+      'UPI', 'UPI/BL/20261005-9921',
+      '2026-10-01 10:00:00', '2026-10-05 14:32:10', null, null,
+      1
+    );
+    for (const l of q3Calc.lines) {
+      insertInvLine.run(invLineId++, uuidv4(), 1, l.product_id, l.variant_id, l.product_name, 'service', l.variant_name, l.quantity, l.base_unit_price, l.variant_additional_price, l.unit_price, l.gross_amount, l.tax_id, 'GST18', l.tax_rate, l.tax_amount, l.line_total);
+    }
+    recordInvoiceHistory(1, { action: 'CREATE_FROM_SUBSCRIPTION', from_status: null, to_status: 'Draft', changed_by: 1, notes: 'Invoice generated from subscription SUB-2026-00001' });
+    recordInvoiceHistory(1, { action: 'CONFIRM_INVOICE', from_status: 'Draft', to_status: 'Confirmed', changed_by: 1, notes: 'Invoice confirmed' });
+    recordInvoiceHistory(1, { action: 'PAY_INVOICE', from_status: 'Confirmed', to_status: 'Paid', changed_by: 8, notes: 'Paid in full via UPI (Ref: UPI/BL/20261005-9921)' });
+
+    // Invoice 2: Confirmed (SUB-2026-00002, Acme Industrial Corp, Annual billing)
+    insertInvoice.run(
+      2, uuidv4(), 'INV-2026-00002', 2, 5, 'Acme Industrial Corp', 'acme.corp@example.com',
+      'SUB-2026-00002', 4, 'Annual Enterprise Cloud', 'yearly',
+      '2026-09-01', '2026-11-01', '2026-09-01', '2027-09-01',
+      'Net 60', 'INR', s2Calc.subtotal, s2Calc.discount_id, s2Calc.discount_code, s2Calc.discount_amount,
+      s2Calc.taxable_amount, s2Calc.tax_amount, s2Calc.total_amount, 0.0,
+      'Confirmed', 'Annual subscription license fee for FY26-27.',
+      null, null,
+      '2026-09-02 09:15:00', null, null, null,
+      2
+    );
+    for (const l of s2Calc.lines) {
+      insertInvLine.run(invLineId++, uuidv4(), 2, l.product_id, l.variant_id, l.product_name, 'service', l.variant_name, l.quantity, l.base_unit_price, l.variant_additional_price, l.unit_price, l.gross_amount, l.tax_id, 'GST18', l.tax_rate, l.tax_amount, l.line_total);
+    }
+    recordInvoiceHistory(2, { action: 'CREATE_FROM_SUBSCRIPTION', from_status: null, to_status: 'Draft', changed_by: 2, notes: 'Generated from annual subscription' });
+    recordInvoiceHistory(2, { action: 'CONFIRM_INVOICE', from_status: 'Draft', to_status: 'Confirmed', changed_by: 2, notes: 'Confirmed upon receipt of formal PO' });
+
+    // Invoice 3: Draft (SUB-2026-00003, Nexus Cloud Innovations)
+    insertInvoice.run(
+      3, uuidv4(), 'INV-2026-00003', 3, 6, 'Nexus Cloud Innovations', 'nexustech@example.com',
+      'SUB-2026-00003', 3, 'Monthly Professional SaaS', 'monthly',
+      '2026-08-15', '2026-09-15', '2026-08-15', '2026-11-15',
+      'Net 30', 'INR', s3Calc.subtotal, s3Calc.discount_id, s3Calc.discount_code, s3Calc.discount_amount,
+      s3Calc.taxable_amount, s3Calc.tax_amount, s3Calc.total_amount, 0.0,
+      'Draft', 'Draft invoice on hold during server migration.',
+      null, null,
+      null, null, null, null,
+      3
+    );
+    for (const l of s3Calc.lines) {
+      insertInvLine.run(invLineId++, uuidv4(), 3, l.product_id, l.variant_id, l.product_name, 'service', l.variant_name, l.quantity, l.base_unit_price, l.variant_additional_price, l.unit_price, l.gross_amount, l.tax_id, 'GST18', l.tax_rate, l.tax_amount, l.line_total);
+    }
+    recordInvoiceHistory(3, { action: 'CREATE_FROM_SUBSCRIPTION', from_status: null, to_status: 'Draft', changed_by: 3, notes: 'Draft generated for review' });
+
+    // Invoice 4: Cancelled (SUB-2026-00004, Zenith Hypermarkets Ltd)
+    insertInvoice.run(
+      4, uuidv4(), 'INV-2026-00004', 4, 7, 'Zenith Hypermarkets Ltd', 'zenith.retail@example.com',
+      'SUB-2026-00004', 3, 'Monthly Professional SaaS', 'monthly',
+      '2026-06-01', '2026-06-16', '2026-06-01', '2026-07-01',
+      'Net 15', 'INR', s4Calc.subtotal, s4Calc.discount_id, s4Calc.discount_code, s4Calc.discount_amount,
+      s4Calc.taxable_amount, s4Calc.tax_amount, s4Calc.total_amount, 0.0,
+      'Cancelled', 'Cancelled due to contract pilot early completion.',
+      null, null,
+      '2026-06-02 10:00:00', null, '2026-06-28 11:00:00', 'Pilot project completed early ahead of schedule',
+      2
+    );
+    for (const l of s4Calc.lines) {
+      insertInvLine.run(invLineId++, uuidv4(), 4, l.product_id, l.variant_id, l.product_name, 'service', l.variant_name, l.quantity, l.base_unit_price, l.variant_additional_price, l.unit_price, l.gross_amount, l.tax_id, 'GST18', l.tax_rate, l.tax_amount, l.line_total);
+    }
+    recordInvoiceHistory(4, { action: 'CREATE_FROM_SUBSCRIPTION', from_status: null, to_status: 'Draft', changed_by: 2, notes: 'Invoice generated' });
+    recordInvoiceHistory(4, { action: 'CONFIRM_INVOICE', from_status: 'Draft', to_status: 'Confirmed', changed_by: 2, notes: 'Invoice confirmed' });
+    recordInvoiceHistory(4, { action: 'CANCEL_INVOICE', from_status: 'Confirmed', to_status: 'Cancelled', changed_by: 2, notes: 'Pilot project completed early ahead of schedule' });
+
+    // Invoice 5: Draft (SUB-2026-00005, Demo Customer, Nov billing)
+    insertInvoice.run(
+      5, uuidv4(), 'INV-2026-00005', 5, 8, 'Demo Customer', 'customer@brightloop.com',
+      'SUB-2026-00005', 5, 'Cloud ERP Team License (Min 3 Users)', 'monthly',
+      '2026-10-31', '2026-11-30', '2026-11-01', '2026-12-01',
+      'Net 30', 'INR', s5Calc.subtotal, s5Calc.discount_id, s5Calc.discount_code, s5Calc.discount_amount,
+      s5Calc.taxable_amount, s5Calc.tax_amount, s5Calc.total_amount, 0.0,
+      'Draft', 'Upcoming team license billing cycle.',
+      null, null,
+      null, null, null, null,
+      1
+    );
+    for (const l of s5Calc.lines) {
+      insertInvLine.run(invLineId++, uuidv4(), 5, l.product_id, l.variant_id, l.product_name, 'service', l.variant_name, l.quantity, l.base_unit_price, l.variant_additional_price, l.unit_price, l.gross_amount, l.tax_id, 'GST18', l.tax_rate, l.tax_amount, l.line_total);
+    }
+    recordInvoiceHistory(5, { action: 'CREATE_FROM_SUBSCRIPTION', from_status: null, to_status: 'Draft', changed_by: 1, notes: 'Created draft for upcoming cycle' });
+
+    console.log('   ✓ Seeded 5 Invoices across Draft, Confirmed, Paid & Cancelled states with full lines and audit history');
+
     console.log('\n🎉 ═══════════════════════════════════════════════════════════════');
     console.log('   MOCK DATA SEEDING COMPLETE!');
     console.log('   - 8 Users (Admin, 3 Staff, 4 Customers)');
@@ -561,6 +565,7 @@ async function seedAllMockData() {
     console.log('   - 3 Reusable Quotation Templates');
     console.log('   - 3 Quotations (Sent, Accepted, Converted)');
     console.log('   - 5 Subscriptions with multi-line items and full history');
+    console.log('   - 5 Invoices across Draft, Confirmed, Paid, Cancelled with lines & history');
     console.log('═════════════════════════════════════════════════════════════════\n');
   } catch (error) {
     console.error('❌ Seeding error:', error);

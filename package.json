@@ -18,7 +18,9 @@
     "test:all": "npm test --prefix backend && node backend/test_all_buttons_and_modals.js",
     "test:m1": "npm run test:m1 --prefix backend",
     "test:m2": "npm run test:m2 --prefix backend",
-    "test:m3": "npm run test:m3 --prefix backend"
+    "test:m3": "npm run test:m3 --prefix backend",
+    "test:m4": "npm run test:m4 --prefix backend",
+    "test:m4:api": "npm run test:m4:api --prefix backend"
   },
   "keywords": [
     "subscription-management",

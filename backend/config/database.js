@@ -318,6 +318,103 @@ function initializeDatabase() {
       FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE CASCADE,
       FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
     );
+
+    /* ─── MODULE 4: Automated Invoicing & Billing ─────────────────────── */
+
+    CREATE TABLE IF NOT EXISTS invoices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT NOT NULL UNIQUE,
+      invoice_number TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      subscription_id INTEGER NOT NULL,
+      customer_id INTEGER NOT NULL,
+      customer_name TEXT NOT NULL,
+      customer_email TEXT NOT NULL,
+      subscription_number TEXT NOT NULL,
+      plan_id INTEGER,
+      plan_name TEXT,
+      billing_frequency TEXT,
+      invoice_date DATE NOT NULL,
+      due_date DATE NOT NULL,
+      billing_period_start DATE NOT NULL,
+      billing_period_end DATE NOT NULL,
+      payment_terms TEXT NOT NULL DEFAULT 'Net 30',
+      currency TEXT NOT NULL DEFAULT 'INR',
+      subtotal REAL NOT NULL DEFAULT 0.0,
+      discount_id INTEGER,
+      discount_code TEXT,
+      discount_amount REAL NOT NULL DEFAULT 0.0,
+      taxable_amount REAL NOT NULL DEFAULT 0.0,
+      tax_amount REAL NOT NULL DEFAULT 0.0,
+      total_amount REAL NOT NULL DEFAULT 0.0,
+      amount_paid REAL NOT NULL DEFAULT 0.0,
+      status TEXT NOT NULL DEFAULT 'Draft' CHECK(status IN ('Draft', 'Confirmed', 'Paid', 'Cancelled')),
+      notes TEXT,
+      payment_method TEXT,
+      payment_reference TEXT,
+      confirmed_at DATETIME,
+      paid_at DATETIME,
+      cancelled_at DATETIME,
+      cancellation_reason TEXT,
+      created_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE RESTRICT,
+      FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE RESTRICT,
+      FOREIGN KEY (plan_id) REFERENCES subscription_plans(id) ON DELETE SET NULL,
+      FOREIGN KEY (discount_id) REFERENCES discounts(id) ON DELETE SET NULL,
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS invoice_lines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT NOT NULL UNIQUE,
+      invoice_id INTEGER NOT NULL,
+      product_id INTEGER,
+      variant_id INTEGER,
+      product_name TEXT NOT NULL,
+      product_type TEXT DEFAULT 'service',
+      variant_name TEXT,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      base_unit_price REAL NOT NULL DEFAULT 0.0,
+      variant_additional_price REAL NOT NULL DEFAULT 0.0,
+      unit_price REAL NOT NULL DEFAULT 0.0,
+      gross_amount REAL NOT NULL DEFAULT 0.0,
+      tax_id INTEGER,
+      tax_code TEXT,
+      tax_rate REAL NOT NULL DEFAULT 0.0,
+      tax_amount REAL NOT NULL DEFAULT 0.0,
+      line_total REAL NOT NULL DEFAULT 0.0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+      FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE SET NULL,
+      FOREIGN KEY (tax_id) REFERENCES taxes(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS invoice_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL,
+      action TEXT NOT NULL,
+      from_status TEXT,
+      to_status TEXT,
+      changed_by INTEGER,
+      notes TEXT,
+      metadata TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+      FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    -- Unique index preventing duplicate active/draft invoices for same subscription and billing period
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_subscription_period
+      ON invoices(subscription_id, billing_period_start, billing_period_end)
+      WHERE status != 'Cancelled';
+
+    CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_invoices_subscription ON invoices(subscription_id);
+    CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+    CREATE INDEX IF NOT EXISTS idx_invoice_lines_invoice ON invoice_lines(invoice_id);
+    CREATE INDEX IF NOT EXISTS idx_invoice_history_invoice ON invoice_history(invoice_id);
   `);
 
   // Seed default roles if they don't exist

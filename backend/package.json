@@ -12,7 +12,9 @@
     "test:parallel": "node test_parallel_runner.js",
     "test:m1": "node test_module1.js",
     "test:m2": "node test_module2.js",
-    "test:m3": "node test_module3.js"
+    "test:m3": "node test_module3.js",
+    "test:m4": "node test_module4.js",
+    "test:m4:api": "node test_module4_api.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

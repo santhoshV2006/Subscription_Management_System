@@ -7,13 +7,13 @@
 
 const { fork } = require('child_process');
 const path = require('path');
-
 const fs = require('fs');
 
 const testSuites = [
   { name: 'Module 1: Authentication & RBAC', file: path.join(__dirname, 'test_module1.js'), dbName: 'test_m1.db' },
   { name: 'Module 2: Products, Plans & Pricing', file: path.join(__dirname, 'test_module2.js'), dbName: 'test_m2.db' },
-  { name: 'Module 3: Subscriptions & Quotations', file: path.join(__dirname, 'test_module3.js'), dbName: 'test_m3.db' }
+  { name: 'Module 3: Subscriptions & Quotations', file: path.join(__dirname, 'test_module3.js'), dbName: 'test_m3.db' },
+  { name: 'Module 4: Invoice Management', file: path.join(__dirname, 'test_module4.js'), dbName: 'test_m4.db' }
 ];
 
 console.log('\n⚡ ═══════════════════════════════════════════════════════════════');

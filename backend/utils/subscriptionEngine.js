@@ -8,7 +8,7 @@ const { evaluateDiscountEligibility } = require('./pricingEngine');
 
 /**
  * Generate next unique sequential number with prefix.
- * e.g., SUB-2026-00001 or QT-2026-00001
+ * e.g., SUB-2026-00001, QT-2026-00001, or INV-2026-00001
  */
 function generateDocumentNumber(prefix = 'SUB') {
   const year = new Date().getFullYear();
@@ -29,6 +29,16 @@ function generateDocumentNumber(prefix = 'SUB') {
     const row = db.prepare(`
       SELECT quotation_number as doc_num FROM quotations 
       WHERE quotation_number LIKE ? 
+      ORDER BY id DESC LIMIT 1
+    `).get(pattern);
+    if (row && row.doc_num) {
+      const parts = row.doc_num.split('-');
+      if (parts.length === 3) maxNum = parseInt(parts[2], 10) || 0;
+    }
+  } else if (prefix === 'INV') {
+    const row = db.prepare(`
+      SELECT invoice_number as doc_num FROM invoices 
+      WHERE invoice_number LIKE ? 
       ORDER BY id DESC LIMIT 1
     `).get(pattern);
     if (row && row.doc_num) {
@@ -306,9 +316,29 @@ function recordSubscriptionHistory(subscriptionId, { action, from_status, to_sta
   );
 }
 
+/**
+ * Record an invoice lifecycle history event.
+ */
+function recordInvoiceHistory(invoiceId, { action, from_status, to_status, changed_by = null, notes = '', metadata = null }) {
+  db.prepare(`
+    INSERT INTO invoice_history (
+      invoice_id, action, from_status, to_status, changed_by, notes, metadata
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    invoiceId,
+    action,
+    from_status,
+    to_status,
+    changed_by,
+    notes,
+    metadata ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : null
+  );
+}
+
 module.exports = {
   generateDocumentNumber,
   calculateExpiryDate,
   calculateSubscriptionDetails,
-  recordSubscriptionHistory
+  recordSubscriptionHistory,
+  recordInvoiceHistory
 };

@@ -2305,3 +2305,72 @@ textarea.form-input:focus {
 
 
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BRIGHTLOOP SOFTWARE — Module 4: Invoice & Billing Styles
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.invoice-document {
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: var(--text-primary);
+}
+
+.invoice-header-banner {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #3730a3 100%);
+  color: white;
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+}
+
+.timeline {
+  position: relative;
+  padding-left: 8px;
+}
+
+.timeline-item {
+  position: relative;
+  padding-left: 20px;
+  border-left: 2px solid var(--gray-200);
+}
+
+.timeline-item:last-child {
+  border-left-color: transparent;
+}
+
+.timeline-item .material-icons-round {
+  position: absolute;
+  left: -10px;
+  top: 0;
+  background: white;
+  border-radius: 50%;
+  font-size: 18px;
+}
+
+.cust-line-row, .edit-draft-line-row {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  transition: all var(--transition-fast);
+}
+
+.cust-line-row:hover, .edit-draft-line-row:hover {
+  background: #ffffff;
+  border-color: var(--primary-300);
+  box-shadow: var(--shadow-sm);
+}
+
+@media print {
+  .sidebar, .topbar, .table-toolbar, .btn, .modal-close, .modal-footer {
+    display: none !important;
+  }
+  .modal-overlay {
+    position: static !important;
+    background: none !important;
+  }
+  .modal {
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

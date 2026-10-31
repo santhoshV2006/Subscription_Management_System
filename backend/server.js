@@ -84,6 +84,7 @@ app.use('/api/discounts', require('./routes/discounts'));
 app.use('/api/pricing', require('./routes/pricing'));
 app.use('/api/subscriptions', require('./routes/subscriptions'));
 app.use('/api/quotations', require('./routes/quotations'));
+app.use('/api/invoices', require('./routes/invoices'));
 
 // Health check
 app.get('/api/health', (req, res) => {
